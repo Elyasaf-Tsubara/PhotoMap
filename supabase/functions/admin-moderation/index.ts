@@ -56,7 +56,17 @@ Deno.serve(async(req:Request)=>{
       .select("id,photo_id,reason,details,contact_email,status,created_at")
       .order("created_at",{ascending:false}).limit(100);
     if(error){console.error("moderation reports",error.code);return json({error:"Could not list reports"},500);}
-    return json({reports:data||[]});
+    const photoIds=[...new Set((data||[]).map(r=>r.photo_id).filter((id):id is string=>Boolean(id)))];
+    const titles=new Map<string,{title:string;status:string}>();
+    if(photoIds.length){
+     const lookup=await admin.from("photos").select("id,title,status").in("id",photoIds);
+     if(lookup.error){console.error("report titles",lookup.error.code);return json({error:"Could not load reported photo titles"},500);}
+     for(const p of lookup.data||[])titles.set(p.id,{title:p.title,status:p.status});
+    }
+    return json({reports:(data||[]).map(r=>({
+     ...r,photo_title:r.photo_id?(titles.get(r.photo_id)?.title||"תמונה לא זמינה"):null,
+     photo_status:r.photo_id?(titles.get(r.photo_id)?.status||null):null
+    }))});
    }
    return json({error:"Unknown list type"},400);
   }
@@ -102,6 +112,41 @@ Deno.serve(async(req:Request)=>{
    const oldRemoved=await admin.storage.from("photos").remove([one.data.image_path]);
    if(oldRemoved.error)console.error("Could not remove previous private copy:",oldRemoved.error.message);
    return json({success:true,status:"approved",sanitized:true});
+  }
+  if(action==="remove_report_photo"||action==="keep_report_photo"){
+   const reportId=String(body.reportId||"");
+   if(!UUID.test(reportId))return json({error:"Invalid report id"},400);
+   const report=await admin.from("photo_reports").select("id,photo_id,status").eq("id",reportId).maybeSingle();
+   if(report.error)return json({error:"Could not read report"},500);
+   if(!report.data)return json({error:"Report not found"},404);
+   if(!report.data.photo_id)return json({error:"This report does not refer to a photo"},400);
+   if(!["new","in_review"].includes(report.data.status))return json({error:"Report already closed; refresh"},409);
+   const photo=await admin.from("photos").select("id,title,status,image_path").eq("id",report.data.photo_id).maybeSingle();
+   if(photo.error)return json({error:"Could not read reported photo"},500);
+   if(!photo.data)return json({error:"Reported photo does not exist"},404);
+   if(action==="keep_report_photo"){
+    if(photo.data.status==="rejected")return json({error:"The photo is already unpublished"},409);
+    const closed=await admin.from("photo_reports").update({status:"rejected"})
+     .eq("id",reportId).in("status",["new","in_review"]).select("id").maybeSingle();
+    if(closed.error||!closed.data)return json({error:"Report changed; refresh"},409);
+    return json({success:true,decision:"kept",report_status:"rejected",photo_status:photo.data.status});
+   }
+   // Unpublish before removing the private storage object.
+   if(photo.data.status!=="rejected"){
+    const hidden=await admin.from("photos").update({status:"rejected"})
+     .eq("id",photo.data.id).eq("status",photo.data.status).select("id").maybeSingle();
+    if(hidden.error||!hidden.data)return json({error:"Photo changed; refresh"},409);
+   }
+   // The row and report remain as an audit trail; its media is deleted.
+   const removed=await admin.storage.from("photos").remove([photo.data.image_path]);
+   if(removed.error){
+    console.error("Moderation file removal",removed.error.message);
+    return json({error:"The photo was unpublished, but file deletion failed. Retry removal."},500);
+   }
+   const closed=await admin.from("photo_reports").update({status:"resolved"})
+    .eq("id",reportId).in("status",["new","in_review"]).select("id").maybeSingle();
+   if(closed.error||!closed.data)return json({error:"The photo was removed, but the report could not be closed. Refresh and retry."},500);
+   return json({success:true,decision:"removed",report_status:"resolved",photo_status:"rejected"});
   }
   if(action==="report_status"){
    const reportId=String(body.reportId||"");
