@@ -6,3 +6,15 @@
 .pickerBanner[hidden]{display:none}
 .pickerBanner button{background:#173d46;color:white;padding:9px 12px;flex-shrink:0}
 #positionText{line-height:1.6}
+
+/* Map fine-adjustment controls */
+.pickerActions{display:flex;gap:7px;align-items:center;flex-shrink:0}
+.pickerActions button:last-child{background:#2ad6a2;color:#06342a}
+#pickerBanner span{line-height:1.5}
+.leaflet-marker-draggable{cursor:grab}
+.leaflet-marker-draggable:active{cursor:grabbing}
+@media(max-width:570px){
+ .pickerBanner{display:grid;grid-template-columns:1fr;gap:8px;top:10px}
+ .pickerActions{justify-content:space-between}
+ .pickerActions button{flex:1}
+}
