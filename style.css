@@ -136,3 +136,31 @@ dialog{background:linear-gradient(135deg,#f7ffff,#e9f7f7);color:#1a3e43;border:1
 @media(prefers-reduced-transparency:reduce){header,.sheet,.bottomNav,.pickerBanner{background:#f7fdfd;-webkit-backdrop-filter:none;backdrop-filter:none}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}button{transition:none}}
 @media(forced-colors:active){header,.sheet,.bottomNav,.editorPanel{border:2px solid CanvasText}button{border:1px solid ButtonText}}
+
+/* v47 mobile usability fixes — keep Leaflet controls behind sheets, visible refresh. */
+.headerActions{display:flex;align-items:center;gap:7px;flex-shrink:0}
+.headerActions button{min-height:43px;padding:9px 11px;white-space:nowrap}
+.sheet{z-index:1250}
+.panelOpen .leaflet-control-zoom{display:none!important}
+.panelOpen .leaflet-control-container{pointer-events:none}
+.panelOpen .bottomNav{pointer-events:none;opacity:.3}
+.leaflet-bottom.leaflet-right .leaflet-control-zoom{margin-right:15px;margin-bottom:114px}
+.leaflet-control-zoom.leaflet-bar{overflow:hidden;border:1px solid rgba(255,255,255,.95);border-radius:18px;background:rgba(252,255,255,.9);box-shadow:0 9px 25px rgba(20,68,75,.21);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
+.leaflet-control-zoom a{width:40px;height:40px;line-height:40px;color:#28505b;background:transparent;border-color:#dbeaea}
+#refreshMap:focus-visible{outline:3px solid #006c99;outline-offset:2px}
+@media(max-width:560px){
+ header{gap:5px}
+ .headerActions{gap:5px}
+ .headerActions button{font-size:0;width:43px;height:43px;min-width:43px;padding:0}
+ #refreshMap::before{content:"↻";font-size:25px;line-height:1}
+ #locate::before{content:"⌖";font-size:24px;line-height:1}
+ .legalMenu{max-width:123px}
+ .legalMenu summary{white-space:nowrap}
+ .leaflet-bottom.leaflet-right .leaflet-control-zoom{margin-bottom:107px;margin-right:12px}
+}
+@media(max-width:360px){
+ header strong{font-size:17px}
+ header small{font-size:10px}
+ .legalMenu summary{font-size:11px;padding:8px 5px}
+ .headerActions button{width:39px;min-width:39px;height:39px}
+}
