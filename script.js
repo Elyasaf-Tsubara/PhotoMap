@@ -87,7 +87,7 @@ function displayPublishPosition(){
  const exact=$("preciseLocation").checked;
  const lat=exact?selectedLocation.lat:Number(selectedLocation.lat.toFixed(3));
  const lng=exact?selectedLocation.lng:Number(selectedLocation.lng.toFixed(3));
- box.textContent=(exact?"מיקום מדויק: ":"מיקום מקורב (ברירת מחדל): ")+lat.toFixed(exact?6:3)+", "+lng.toFixed(exact?6:3)+". הנקודה תהיה גלויה רק אם התמונה תאושר.";
+ box.textContent=exact?"בחרת לפרסם מיקום מדויק. הנקודה תוצג רק לאחר אישור התמונה.":"פרסום מיקום בקירוב (כ־100 מטר) — ברירת המחדל להגנה על פרטיות.";
 }
 $("preciseLocation").addEventListener("change",displayPublishPosition);
 $("applyCoordinates").addEventListener("click",()=>{
@@ -102,7 +102,7 @@ $("applyCoordinates").addEventListener("click",()=>{
 });
 for(const name of ["manualLat","manualLng"]){$(name).addEventListener("keydown",event=>{if(event.key==="Enter"){event.preventDefault();$("applyCoordinates").click();}});}
 document.addEventListener("keydown",event=>{
- if(event.key!=="Escape"||$("photoDialog").open)return;
+ if(event.key!=="Escape"||!$("photoDialog").open)return;
  if(pickingPosition){event.preventDefault();$("cancelPick").click();}
  else if(!$("uploadPanel").hidden||!$("galleryPanel").hidden){event.preventDefault();openPanel(null);}
 });
