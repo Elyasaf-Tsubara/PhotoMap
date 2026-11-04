@@ -345,7 +345,7 @@ async function loadPictures(){
 $("uploadForm").onsubmit=async e=>{
  e.preventDefault();
  const file=selectedUploadFile,title=$("photoTitle").value.trim(),status=$("uploadStatus");
- if(!window.PhotoMapEditor?.isReady()){status.textContent="בחר תמונה והשלם את בדיקת הפנים והטשטוש לפני השליחה.";return;}
+ if(!window.PhotoMapEditor?.isReady()){status.textContent="בחר תמונה והשלם זיהוי פנים אוטומטי או טשטוש ואישור בדיקה ידנית לפני השליחה.";return;}
  if(!ready){status.textContent="חיבור לשרת עדיין אינו זמין";return;}
  if(!file){status.textContent="יש לבחור תמונה";return;}
  if(!selectedLocation||!selectedLocationConfirmed){status.textContent="יש ללחוץ על אישור המיקום לפני השליחה";return;}
@@ -354,7 +354,7 @@ $("uploadForm").onsubmit=async e=>{
  const button=$("publish");
  button.disabled=true;status.textContent="מכין את התמונה ומסיר מידע נסתר...";
  try{
-  if(!window.PhotoMapEditor?.isReady())throw Error("יש להשלים זיהוי פנים וטשטוש לפני העלאה");
+  if(!window.PhotoMapEditor?.isReady())throw Error("יש להשלים זיהוי פנים או לטשטש ידנית ולאשר בדיקת פרטיות לפני העלאה");
   const cleaned=await window.PhotoMapEditor.exportBlob();
   const precise=$("preciseLocation").checked;
   const latitude=precise?selectedLocation.lat:Number(selectedLocation.lat.toFixed(3));
