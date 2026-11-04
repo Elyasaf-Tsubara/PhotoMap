@@ -1,4 +1,4 @@
-"use strict";const $=id=>document.getElementById(id);const config=window.PHOTO_MAP_CONFIG||{};const ready=Boolean(config.supabaseUrl&&config.supabaseAnonKey&&window.supabase);const db=ready?window.supabase.createClient(config.supabaseUrl,config.supabaseAnonKey):null;const map=L.map("map",{zoomControl:false}).setView([31.78,35.22],8);L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'}).addTo(map);L.control.zoom({position:"topleft"}).addTo(map);let pictures=[],markers=L.layerGroup().addTo(map),selectedLocation=null;const maxBytes=8*1024*1024;
+"use strict";const $=id=>document.getElementById(id);const config=window.PHOTO_MAP_CONFIG||{};const ready=Boolean(config.supabaseUrl&&config.supabaseAnonKey&&window.supabase);const db=ready?window.supabase.createClient(config.supabaseUrl,config.supabaseAnonKey):null;const map=L.map("map",{zoomControl:false}).setView([31.78,35.22],8);L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'}).addTo(map);L.control.zoom({position:"bottomright",zoomInTitle:"התקרב",zoomOutTitle:"התרחק"}).addTo(map);let pictures=[],markers=L.layerGroup().addTo(map),selectedLocation=null;const maxBytes=8*1024*1024;
 function notice(message){$("mapNotice").textContent=message;$("mapNotice").hidden=false;}
 if(!ready)notice("מצב הדגמה: המפה פעילה, אבל פרסום ושיתוף תמונות יפעלו רק לאחר חיבור מאגר Supabase.");
 let captchaWidgetId=null;let captchaToken="";function mountCaptcha(){if(captchaWidgetId!==null||!window.turnstile||!config.turnstileSiteKey)return;captchaWidgetId=window.turnstile.render("#turnstileWidget",{sitekey:config.turnstileSiteKey,callback:token=>{captchaToken=token;}, "expired-callback":()=>{captchaToken="";},"error-callback":()=>{captchaToken="";}});}function openPanel(id){
@@ -7,6 +7,7 @@ let captchaWidgetId=null;let captchaToken="";function mountCaptcha(){if(captchaW
  $("galleryPanel").hidden=id!=="galleryPanel";
  $("uploadPanel").hidden=id!=="uploadPanel";
  $("mainContent").inert=Boolean(id);
+ document.body.classList.toggle("panelOpen",Boolean(id));
  for(const [button,chosen] of [["mapTab",!id],["cameraTab",id==="uploadPanel"],["galleryTab",id==="galleryPanel"]]){
   $(button).classList.toggle("selected",chosen);
   $(button).setAttribute("aria-pressed",String(chosen));
@@ -14,6 +15,11 @@ let captchaWidgetId=null;let captchaToken="";function mountCaptcha(){if(captchaW
  if(id && id!==prior){const heading=$(id==="uploadPanel"?"uploadHeading":"galleryHeading");heading.focus({preventScroll:true});}
  if(!id){setTimeout(()=>map.invalidateSize(),100);if(prior)$("mapTab").focus({preventScroll:true});}
 }
+$("refreshMap").onclick=async()=>{
+ const button=$("refreshMap");
+ button.disabled=true;button.textContent="↻ מרענן...";
+ try{await loadPictures();}finally{button.disabled=false;button.textContent="↻ רענון";}
+};
 $("mapTab").onclick=()=>openPanel(null);$("cameraTab").onclick=()=>openPanel("uploadPanel");$("galleryTab").onclick=()=>openPanel("galleryPanel");document.querySelectorAll(".closeSheet").forEach(b=>b.onclick=()=>openPanel(null));
 
 let currentLocationMarker=null, currentAccuracyCircle=null, selectedLocationMarker=null, pickingPosition=false;
@@ -166,6 +172,7 @@ $("closePhoto").onclick=()=>$("photoDialog").close();
 function drawPictures(){markers.clearLayers();$("gallery").replaceChildren();if(!pictures.length){const msg=document.createElement("p");msg.textContent="עדיין אין תמונות מאושרות להצגה.";msg.setAttribute("role","status");$("gallery").append(msg);}for(const p of pictures){const url=publicImageUrl(p),img=document.createElement("img");img.src=url;img.alt=p.title;img.className="photoMarker";const marker=L.marker([p.latitude,p.longitude],{keyboard:true,title:"תמונה: "+p.title,alt:"תמונה: "+p.title,icon:L.divIcon({html:img.outerHTML,className:"",iconSize:[44,44],iconAnchor:[22,22]})}).addTo(markers);marker.on("click",()=>openPicture(p));const tile=document.createElement("button");tile.type="button";tile.className="tile";tile.setAttribute("aria-label","פתח תמונה: "+p.title);const pic=document.createElement("img");pic.src=url;pic.loading="lazy";pic.alt="";const title=document.createElement("span");title.textContent=p.title;tile.append(pic,title);tile.onclick=()=>{openPanel(null);map.setView([p.latitude,p.longitude],16);openPicture(p);};$("gallery").append(tile);}$("photoCount").textContent=pictures.length+" תמונות במפה";}
 async function loadPictures(){
  if(!ready){$("photoCount").textContent="מפה לדוגמה";return;}
+ $("mapNotice").hidden=true;
  $("photoCount").textContent="טוען תמונות...";
  const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),10000);
  try{
