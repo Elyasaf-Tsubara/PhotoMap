@@ -18,3 +18,18 @@
  .pickerActions{justify-content:space-between}
  .pickerActions button{flex:1}
 }
+
+/* Public policy navigation and informed upload consent */
+.legalMenu{position:relative;z-index:1001;max-width:165px}
+.legalMenu summary{list-style:none;cursor:pointer;background:#264650;color:#fff;padding:10px 12px;border-radius:11px;font-weight:bold;font-size:13px}
+.legalMenu summary::-webkit-details-marker{display:none}
+.legalMenu summary:focus-visible,.bottomNav button:focus-visible,.positionActions button:focus-visible{outline:3px solid #30e0af;outline-offset:2px}
+.legalMenu nav{position:absolute;top:calc(100% + 7px);right:0;min-width:155px;display:grid;background:#fff;border-radius:12px;padding:8px;box-shadow:0 8px 25px #0006}
+.legalMenu nav a{display:block;padding:9px;color:#153640;text-decoration:none;font-weight:600;font-size:14px}
+.legalMenu nav a:hover,.legalMenu nav a:focus{background:#d9f6ed;border-radius:7px}
+.positionPreview{background:#22444d;border-radius:9px;padding:11px;line-height:1.7;margin:0;color:#e4fffa;font-size:14px}
+#uploadForm .check{display:flex;align-items:flex-start;gap:10px;line-height:1.65}
+#uploadForm .check input{flex:0 0 auto;margin-top:6px}
+#uploadForm .check a{color:#a2ffe3}
+.reportLink{display:block;text-align:center;text-decoration:none;margin-top:10px;padding:12px;border-radius:10px;font-weight:bold}
+@media(max-width:440px){header strong{font-size:17px}.legalMenu summary{font-size:12px;padding:8px 6px}.legalMenu nav{right:-20px}header{padding:8px}header button{padding:9px 7px}}
