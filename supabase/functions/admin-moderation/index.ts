@@ -51,6 +51,18 @@ Deno.serve(async(req:Request)=>{
     }));
     return json({photos});
    }
+   if(type==="comments"){
+    const data=await admin.from("photo_comments").select("id,photo_id,display_name,body,status,created_at").order("created_at",{ascending:false}).limit(150);
+    if(data.error)return json({error:"Could not load comments"},500);
+    const ids=[...new Set((data.data||[]).map(v=>v.photo_id))];
+    const titles=new Map<string,string>();
+    if(ids.length){
+     const photos=await admin.from("photos").select("id,title").in("id",ids);
+     if(photos.error)return json({error:"Could not load photo names"},500);
+     for(const p of photos.data||[])titles.set(p.id,p.title);
+    }
+    return json({comments:(data.data||[]).map(c=>({...c,photo_title:titles.get(c.photo_id)||"תמונה לא זמינה"}))});
+   }
    if(type==="reports"){
     const {data,error}=await admin.from("photo_reports")
       .select("id,photo_id,reason,details,contact_email,status,created_at")
@@ -147,6 +159,15 @@ Deno.serve(async(req:Request)=>{
     .eq("id",reportId).in("status",["new","in_review"]).select("id").maybeSingle();
    if(closed.error||!closed.data)return json({error:"The photo was removed, but the report could not be closed. Refresh and retry."},500);
    return json({success:true,decision:"removed",report_status:"resolved",photo_status:"rejected"});
+  }
+  if(action==="comment_status"){
+   const commentId=String(body.commentId||"");
+   const status=String(body.status||"");
+   if(!UUID.test(commentId)||!["approved","rejected"].includes(status))return json({error:"Invalid comment moderation"},400);
+   const change=await admin.from("photo_comments").update({status})
+    .eq("id",commentId).eq("status","pending").select("id").maybeSingle();
+   if(change.error||!change.data)return json({error:"Comment already reviewed; refresh"},409);
+   return json({success:true,status});
   }
   if(action==="report_status"){
    const reportId=String(body.reportId||"");
