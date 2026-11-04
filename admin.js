@@ -138,14 +138,28 @@ function renderReports(){
 }
 $("loginForm").onsubmit=async event=>{
  event.preventDefault();
- if(!client)return status("חיבור האתר אינו זמין",true,"loginStatus");
- $("loginButton").disabled=true;status("שולח קישור...",false,"loginStatus");
+ if(!client)return status("החיבור לשרת אינו זמין",true,"loginStatus");
+ const password=$("adminPassword").value;
+ if(password.length<8)return status("יש להזין סיסמת מנהל באורך שמונה תווים לפחות.",true,"loginStatus");
+ $("loginButton").disabled=true;status("מאמת הרשאות...",false,"loginStatus");
  try{
-  const {error}=await client.auth.signInWithOtp({email:ADMIN,options:{emailRedirectTo:location.origin+"/admin.html",shouldCreateUser:true}});
+  const {error}=await client.auth.signInWithPassword({email:ADMIN,password});
   if(error)throw error;
-  status("נשלחה בקשת התחברות. בדוק את Gmail של PhotoMap, כולל ספאם. קישור עובד רק אם הכתובת מוגדרת ב־Supabase Auth.",false,"loginStatus");
- }catch(err){status("שליחת הקישור נכשלה: "+err.message,true,"loginStatus");}
+  $("adminPassword").value="";
+  await authenticate();
+ }catch(err){status("ההתחברות נכשלה: "+err.message,true,"loginStatus");}
  finally{$("loginButton").disabled=false;}
+};
+$("magicForm").onsubmit=async event=>{
+ event.preventDefault();
+ if(!client)return status("החיבור לשרת אינו זמין",true,"loginStatus");
+ $("magicButton").disabled=true;status("שולח קישור...",false,"loginStatus");
+ try{
+  const {error}=await client.auth.signInWithOtp({email:ADMIN,options:{emailRedirectTo:location.origin+"/admin.html",shouldCreateUser:false}});
+  if(error)throw error;
+  status("אם משלוח מיילים והפניות הוגדרו ב־Supabase, יישלח קישור. בדוק את תיבת PhotoMap.",false,"loginStatus");
+ }catch(err){status("שליחת הקישור נכשלה: "+err.message,true,"loginStatus");}
+ finally{$("magicButton").disabled=false;}
 };
 $("otpForm").onsubmit=async event=>{
  event.preventDefault();
