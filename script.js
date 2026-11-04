@@ -235,8 +235,80 @@ async function chooseFile(input,kind){
 $("photoFile").onchange=()=>chooseFile($("photoFile"),"library");
 $("cameraFile").onchange=()=>chooseFile($("cameraFile"),"camera");
 function publicImageUrl(photo){return photo.image_url||"";}
-function openPicture(p){$("largePhoto").src=publicImageUrl(p);$("largeTitle").textContent=p.title;$("largeDetails").textContent=new Date(p.created_at).toLocaleString("he-IL");$("reportPhoto").href="report.html?photo="+encodeURIComponent(p.id);$("photoDialog").showModal();}
+let commentCaptchaId=null,commentCaptchaToken="",commentCaptchaTimer=null;
+function mountCommentCaptcha(){
+ if(commentCaptchaId!==null||!window.turnstile||!config.turnstileSiteKey||$("photoDialog").open)return;
+ commentCaptchaId=window.turnstile.render("#commentCaptcha",{sitekey:config.turnstileSiteKey,
+ callback:token=>commentCaptchaToken=token,
+ "expired-callback":()=>commentCaptchaToken="","error-callback":()=>commentCaptchaToken=""});
+}
+async function loadComments(photoId){
+ const target=$("commentsList");target.replaceChildren();
+ const loading=document.createElement("p");loading.textContent="טוען תגובות…";target.append(loading);
+ try{
+  const r=await fetch(config.supabaseUrl+"/functions/v1/photo-comments?photoId="+encodeURIComponent(photoId),
+   {headers:{"apikey":config.supabaseAnonKey}});
+  const data=await r.json();
+  if(!r.ok||!Array.isArray(data.comments))throw Error("שגיאה בטעינת התגובות");
+  if(activePhotoId!==photoId)return;
+  target.replaceChildren();
+  if(!data.comments.length){const empty=document.createElement("p");empty.textContent="עדיין אין תגובות מאושרות. אפשר להיות הראשונים.";target.append(empty);}
+  for(const c of data.comments){
+   const card=document.createElement("article");card.className="commentCard";
+   const head=document.createElement("strong");head.textContent=c.display_name;
+   const dateLine=document.createElement("time");dateLine.textContent=new Date(c.created_at).toLocaleString("he-IL");
+   const body=document.createElement("p");body.textContent=c.body;
+   card.append(head,dateLine,body);target.append(card);
+  }
+ }catch{if(activePhotoId===photoId)target.textContent="אי אפשר לטעון תגובות כרגע.";}
+}
+function openPicture(p){
+ activePhotoId=p.id;
+ $("largePhoto").src=publicImageUrl(p);
+ $("largePhoto").alt=p.title;
+ $("largeTitle").textContent=p.title;
+ $("largeDetails").textContent="פורסם באתר · "+new Date(p.created_at).toLocaleString("he-IL");
+ $("photoUploadedAt").textContent=new Date(p.created_at).toLocaleString("he-IL");
+ $("photoTakenAt").textContent=p.captured_at?new Date(p.captured_at).toLocaleString("he-IL")+" (לפי נתוני הקובץ)":"לא זמין";
+ $("photoSource").textContent=p.source_kind==="camera"?"נפתחה מצלמה בעת בחירת התמונה":p.source_kind==="library"?"נבחרה תמונה מהטלפון":"לא ידוע (תמונה ישנה)";
+ $("photoLocation").textContent=Number(p.latitude).toFixed(3)+", "+Number(p.longitude).toFixed(3);
+ $("photoInfoPanel").hidden=true;
+ $("photoInfoButton").setAttribute("aria-expanded","false");
+ $("reportPhoto").href="report.html?photo="+encodeURIComponent(p.id);
+ $("commentForm").reset();$("commentStatus").textContent="";
+ $("photoDialog").showModal();
+ loadComments(p.id);
+ if(commentCaptchaTimer)clearInterval(commentCaptchaTimer);
+ let attempts=0;
+ commentCaptchaTimer=setInterval(()=>{mountCommentCaptcha();if(commentCaptchaId!==null||++attempts>45)clearInterval(commentCaptchaTimer);},200);
+}
+$("photoInfoButton").onclick=()=>{
+ const box=$("photoInfoPanel");
+ box.hidden=!box.hidden;
+ $("photoInfoButton").setAttribute("aria-expanded",String(!box.hidden));
+};
+$("commentForm").onsubmit=async event=>{
+ event.preventDefault();
+ const photoId=activePhotoId;
+ const name=$("commentName").value.trim(),message=$("commentText").value.trim();
+ const status=$("commentStatus");
+ if(!photoId)return;
+ if(!commentCaptchaToken){status.textContent="יש להשלים בדיקת אבטחה לפני שליחת התגובה.";mountCommentCaptcha();return;}
+ const button=$("sendComment");button.disabled=true;status.textContent="שולח תגובה לבדיקה…";
+ try{
+  const r=await fetch(config.supabaseUrl+"/functions/v1/photo-comments",{
+   method:"POST",headers:{"apikey":config.supabaseAnonKey,"Content-Type":"application/json"},
+   body:JSON.stringify({photoId,name,message,captchaToken:commentCaptchaToken})
+  });
+  const result=await r.json();
+  if(!r.ok||!result.success)throw Error(result.error||"שליחת תגובה נכשלה");
+  status.textContent="התגובה התקבלה לבדיקה. היא תוצג לאחר אישור מנהל.";
+  $("commentForm").reset();
+ }catch(err){status.textContent="התגובה לא נשלחה: "+err.message;}
+ finally{button.disabled=false;commentCaptchaToken="";if(window.turnstile&&commentCaptchaId!==null)window.turnstile.reset(commentCaptchaId);}
+};
 $("closePhoto").onclick=()=>$("photoDialog").close();
+$("photoDialog").addEventListener("close",()=>{activePhotoId=null;});
 function drawPictures(){markers.clearLayers();$("gallery").replaceChildren();if(!pictures.length){const msg=document.createElement("p");msg.textContent="עדיין אין תמונות מאושרות להצגה.";msg.setAttribute("role","status");$("gallery").append(msg);}for(const p of pictures){const url=publicImageUrl(p),img=document.createElement("img");img.src=url;img.alt=p.title;img.className="photoMarker";const marker=L.marker([p.latitude,p.longitude],{keyboard:true,title:"תמונה: "+p.title,alt:"תמונה: "+p.title,icon:L.divIcon({html:img.outerHTML,className:"",iconSize:[44,44],iconAnchor:[22,22]})}).addTo(markers);marker.on("click",()=>openPicture(p));const tile=document.createElement("button");tile.type="button";tile.className="tile";tile.setAttribute("aria-label","פתח תמונה: "+p.title);const pic=document.createElement("img");pic.src=url;pic.loading="lazy";pic.alt="";const title=document.createElement("span");title.textContent=p.title;tile.append(pic,title);tile.onclick=()=>{openPanel(null);map.setView([p.latitude,p.longitude],16);openPicture(p);};$("gallery").append(tile);}$("photoCount").textContent=pictures.length+" תמונות במפה";}
 async function loadPictures(){
  if(!ready){$("photoCount").textContent="מפה לדוגמה";return;}
