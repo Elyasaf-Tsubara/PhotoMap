@@ -33,13 +33,27 @@ function showCurrentPosition(p){
   currentAccuracyCircle=L.circle([p.lat,p.lng],{radius:Math.max(1,p.accuracy||1),color:"#0e8ee7",weight:1,fillOpacity:0.08}).addTo(map);
   map.setView([p.lat,p.lng],Math.max(map.getZoom(),15));
 }
+function updateSelectedPositionText(source){
+  if(!selectedLocation)return;
+  const p=selectedLocation;
+  const accuracy=p.accuracy==null?"":(" (דיוק GPS משוער: "+Math.round(p.accuracy)+" מטר)");
+  $("positionText").textContent="נבחר "+source+": "+p.lat.toFixed(6)+", "+p.lng.toFixed(6)+accuracy+". ניתן לדייק על המפה לפני הפרסום.";
+}
 function setSelectedPosition(p,source){
-  selectedLocation=p;
-  if(selectedLocationMarker)map.removeLayer(selectedLocationMarker);
-  selectedLocationMarker=L.marker([p.lat,p.lng]).addTo(map);
+  selectedLocation={lat:p.lat,lng:p.lng,accuracy:p.accuracy??null};
+  if(!selectedLocationMarker){
+    selectedLocationMarker=L.marker([p.lat,p.lng],{draggable:true,autoPan:true,title:"גרור אותי כדי לדייק את מיקום התמונה"}).addTo(map);
+    selectedLocationMarker.on("dragend",()=>{
+      const point=selectedLocationMarker.getLatLng();
+      selectedLocation={lat:point.lat,lng:point.lng,accuracy:null};
+      updateSelectedPositionText("מיקום מדויק ידנית");
+    });
+    selectedLocationMarker.bindTooltip("אפשר לגרור אותי כדי לדייק",{direction:"top"});
+  }else{
+    selectedLocationMarker.setLatLng([p.lat,p.lng]);
+  }
   map.setView([p.lat,p.lng],Math.max(map.getZoom(),15));
-  const accuracy=p.accuracy===null?"":(" (דיוק משוער: "+Math.round(p.accuracy)+" מטר)");
-  $("positionText").textContent="נבחר "+source+": "+p.lat.toFixed(5)+", "+p.lng.toFixed(5)+accuracy+". מיקום זה יפורסם יחד עם התמונה רק לאחר אישורך.";
+  updateSelectedPositionText(source);
 }
 $("locate").onclick=async()=>{
   const btn=$("locate"),original=btn.textContent;
@@ -55,15 +69,41 @@ $("getPosition").onclick=async()=>{
   catch(error){$("positionText").textContent=explainLocationError(error)+" אפשר גם ללחוץ על 'בחר במפה'.";}
   finally{btn.disabled=false;}
 };
+let positionBeforePicker=null;
 $("pickPosition").onclick=()=>{
-  pickingPosition=true;$("pickerBanner").hidden=false;openPanel(null);
-  setTimeout(()=>map.invalidateSize(),60);
+  positionBeforePicker=selectedLocation?{...selectedLocation}:null;
+  pickingPosition=true;
+  $("pickerBanner").hidden=false;
+  openPanel(null);
+  setTimeout(()=>{
+    map.invalidateSize();
+    if(selectedLocation)map.setView([selectedLocation.lat,selectedLocation.lng],Math.max(map.getZoom(),18));
+  },100);
 };
-$("cancelPick").onclick=()=>{pickingPosition=false;$("pickerBanner").hidden=true;openPanel("uploadPanel");};
+$("finishPick").onclick=()=>{
+  if(!selectedLocation){
+    notice("לחץ על המפה כדי לבחור את מיקום התמונה.");
+    return;
+  }
+  pickingPosition=false;
+  $("pickerBanner").hidden=true;
+  openPanel("uploadPanel");
+};
+$("cancelPick").onclick=()=>{
+  if(positionBeforePicker){
+    setSelectedPosition(positionBeforePicker,"המיקום הקודם");
+  }else{
+    selectedLocation=null;
+    if(selectedLocationMarker){map.removeLayer(selectedLocationMarker);selectedLocationMarker=null;}
+    $("positionText").textContent="לא נבחר מיקום. אפשר לקבל GPS או לבחור נקודה במפה.";
+  }
+  pickingPosition=false;
+  $("pickerBanner").hidden=true;
+  openPanel("uploadPanel");
+};
 map.on("click",e=>{
   if(!pickingPosition)return;
   setSelectedPosition({lat:e.latlng.lat,lng:e.latlng.lng,accuracy:null},"מיקום ידני במפה");
-  pickingPosition=false;$("pickerBanner").hidden=true;openPanel("uploadPanel");
 });
 $("photoFile").onchange=()=>{if(previewURL)URL.revokeObjectURL(previewURL);const f=$("photoFile").files[0];if(!f)return;if(!f.type.startsWith("image/")||f.size>maxBytes){$("uploadStatus").textContent="בחר תמונה מסוג נתמך עד 8MB";$("photoFile").value="";return;}previewURL=URL.createObjectURL(f);$("preview").src=previewURL;$("preview").hidden=false;};
 function publicImageUrl(path){return db.storage.from("photos").getPublicUrl(path).data.publicUrl;}
