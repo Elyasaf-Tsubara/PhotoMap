@@ -180,17 +180,60 @@ map.on("click",e=>{
   if(!pickingPosition)return;
   setSelectedPosition({lat:e.latlng.lat,lng:e.latlng.lng,accuracy:null},"מיקום ידני במפה");
 });
-$("photoFile").onchange=async()=>{
- const file=$("photoFile").files[0],status=$("uploadStatus");
- status.textContent="";
- if(!file){window.PhotoMapEditor?.reset();return;}
- if(!file.type.startsWith("image/")||file.size>maxBytes){
-  status.textContent="בחר תמונה מסוג נתמך עד 8MB";$("photoFile").value="";window.PhotoMapEditor?.reset();return;
- }
- if(!window.PhotoMapEditor){status.textContent="עורך הפרטיות לא נטען. רענן את הדף.";return;}
+async function exifDate(file){
+ if(file.type!=="image/jpeg")return null;
+ try{
+  const b=await file.slice(0,128000).arrayBuffer(),v=new DataView(b);
+  if(v.getUint16(0)!==0xffd8)return null;let cursor=2;
+  while(cursor+4<b.byteLength){
+   if(v.getUint8(cursor)!==255)break;
+   const mark=v.getUint8(cursor+1);if(mark===0xda||mark===0xd9)break;
+   const len=v.getUint16(cursor+2);
+   if(mark===0xe1&&len>=14&&cursor+len+2<=b.byteLength
+     &&v.getUint32(cursor+4)===0x45786966&&v.getUint16(cursor+8)===0){
+    const base=cursor+10,le=v.getUint16(base)===0x4949;
+    if(!le&&v.getUint16(base)!==0x4d4d)break;
+    const u16=p=>v.getUint16(p,le),u32=p=>v.getUint32(p,le);
+    function getTags(off){
+     const pos=base+off;if(pos<base||pos+2>=b.byteLength)return {};
+     const count=Math.min(100,u16(pos)),tags={};
+     for(let i=0;i<count;i++){
+      const e=pos+2+12*i;if(e+12>b.byteLength)break;
+      tags[u16(e)]={type:u16(e+2),count:u32(e+4),value:u32(e+8)};
+     }
+     return tags;
+    }
+    const first=getTags(u32(base+4));
+    const exif=first[0x8769]?getTags(first[0x8769].value):{};
+    const tag=exif[0x9003]||first[0x0132];if(!tag||tag.type!==2||tag.count<19||tag.count>40)break;
+    const p=base+tag.value;if(p<0||p+tag.count>b.byteLength)break;
+    const str=Array.from(new Uint8Array(b,p,tag.count)).map(c=>String.fromCharCode(c)).join("").replace(/\0/g,"");
+    const m=/^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/.exec(str);
+    if(!m)break;const parts=m.slice(1).map(Number);
+    const d=new Date(parts[0],parts[1]-1,parts[2],parts[3],parts[4],parts[5]);
+    if(d.getFullYear()===parts[0]&&d.getMonth()===parts[1]-1&&d.getDate()===parts[2]&&d.getTime()<=Date.now()+3600000&&d.getFullYear()>=2000)return d.toISOString();
+   }
+   if(len<2)break;cursor+=2+len;
+  }
+ }catch{}
+ return null;
+}
+async function chooseFile(input,kind){
+ const file=input.files[0],status=$("uploadStatus");
+ if(!file)return;
+ selectedUploadFile=null;sourceKind=kind;captureTime=null;
+ $("photoFile").value=input===$("photoFile")?input.value:"";
+ if(input!==$("cameraFile"))$("cameraFile").value="";
+ if(!file.type.startsWith("image/")||file.size>maxBytes){status.textContent="בחר תמונה מסוג נתמך עד 8MB";input.value="";window.PhotoMapEditor?.reset();return;}
+ if(!window.PhotoMapEditor){status.textContent="עורך טשטוש לא נטען. רענן את הדף.";return;}
+ selectedUploadFile=file;
+ $("fileSelection").textContent=kind==="camera"?"תמונה חדשה מהמצלמה":"תמונה שנבחרה מהטלפון";
+ captureTime=await exifDate(file);
  try{await window.PhotoMapEditor.load(file);}
  catch(error){status.textContent="עיבוד התמונה נכשל: "+error.message;}
-};
+}
+$("photoFile").onchange=()=>chooseFile($("photoFile"),"library");
+$("cameraFile").onchange=()=>chooseFile($("cameraFile"),"camera");
 function publicImageUrl(photo){return photo.image_url||"";}
 function openPicture(p){$("largePhoto").src=publicImageUrl(p);$("largeTitle").textContent=p.title;$("largeDetails").textContent=new Date(p.created_at).toLocaleString("he-IL");$("reportPhoto").href="report.html?photo="+encodeURIComponent(p.id);$("photoDialog").showModal();}
 $("closePhoto").onclick=()=>$("photoDialog").close();
