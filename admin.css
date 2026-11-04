@@ -5,3 +5,21 @@
 .auth label.rememberChoice{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:700;cursor:pointer;margin:6px 0 0}
 .auth .rememberChoice input[type="checkbox"]{width:22px;height:22px;flex:none;accent-color:#087f67;cursor:pointer}
 .rememberHelp{margin:0 0 8px;font-size:13px;line-height:1.6}
+
+/* PhotoMap glass dashboard */
+:root{--ink:#183740;--accent:#078a7b}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:var(--ink);background:radial-gradient(ellipse at 8% 0%,#d1eeeb 0,transparent 42%),radial-gradient(ellipse at 95% 80%,#dbe9fc 0,transparent 40%),#edf6f6;min-height:100dvh}
+header{background:linear-gradient(130deg,rgba(246,255,255,.9),rgba(229,246,247,.83));color:#183942;border-bottom:1px solid #fff;-webkit-backdrop-filter:blur(24px) saturate(150%);backdrop-filter:blur(24px) saturate(150%);box-shadow:0 4px 24px #19424a14}
+header span{color:#5d727b}header a{color:#086e67}
+.panel,.photoCard,.reportCard{background:linear-gradient(145deg,rgba(255,255,255,.94),rgba(244,253,253,.85));border:1px solid rgba(255,255,255,.96);-webkit-backdrop-filter:blur(25px);backdrop-filter:blur(25px);border-radius:25px;box-shadow:0 15px 45px rgba(21,69,76,.08),inset 0 1px 0 white}
+button{border-radius:16px;background:linear-gradient(145deg,#38dfc6,#16b8a5);box-shadow:0 6px 20px rgba(18,146,128,.13),inset 0 1px 0 #ffffff9c;color:#064c43;border:1px solid rgba(255,255,255,.76);transition:transform .15s ease,filter .15s ease}
+button:active:not(:disabled){transform:scale(.97)}button:hover:not(:disabled){filter:brightness(1.03)}
+button.ghost,.tabs button{background:#e4f2f3;color:#26545d;box-shadow:inset 0 1px 0 #fff}
+.tabs button.active{background:linear-gradient(140deg,#136e72,#0e8b7b);color:white}
+button.danger{background:linear-gradient(135deg,#ffe0dc,#f7c6c0);color:#822a27}
+input,select,textarea{border:1px solid #aec9cb;border-radius:14px;background:rgba(255,255,255,.93);color:#1b4047;min-height:47px}
+.auth{max-width:580px}.stats .stat,.stat{border-radius:18px;background:rgba(255,255,255,.84);border:1px solid white;box-shadow:0 5px 18px #2348530c}
+.photoCard img{border-radius:18px}.warning{background:rgba(255,246,217,.86);border-radius:18px}
+.reportPhotoTitle{color:#075f5c}.tag{border-radius:12px}.reportCard .actions .danger{background:#ffdfdc}
+@media(prefers-reduced-transparency:reduce){header,.panel,.photoCard,.reportCard{background:#fff;-webkit-backdrop-filter:none;backdrop-filter:none}}
+@media(prefers-reduced-motion:reduce){button{transition:none}}
