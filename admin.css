@@ -23,3 +23,10 @@ input,select,textarea{border:1px solid #aec9cb;border-radius:14px;background:rgb
 .reportPhotoTitle{color:#075f5c}.tag{border-radius:12px}.reportCard .actions .danger{background:#ffdfdc}
 @media(prefers-reduced-transparency:reduce){header,.panel,.photoCard,.reportCard{background:#fff;-webkit-backdrop-filter:none;backdrop-filter:none}}
 @media(prefers-reduced-motion:reduce){button{transition:none}}
+
+/* Comment approval queue and compact tabs */
+.tabs{display:flex;flex-wrap:wrap;gap:8px}
+.tabs button{flex:1 1 auto;min-width:105px;padding:11px 13px}
+#commentsSection .reportCard{border:1px solid #d2e8e5}
+#commentsSection .reportText{max-height:none;white-space:pre-wrap;overflow-wrap:anywhere}
+@media(max-width:420px){.tabs button{font-size:13px;min-width:88px;padding:10px 8px}}
