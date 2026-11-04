@@ -15,10 +15,10 @@ let captchaWidgetId=null;let captchaToken="";function mountCaptcha(){if(captchaW
  if(id && id!==prior){const heading=$(id==="uploadPanel"?"uploadHeading":"galleryHeading");heading.focus({preventScroll:true});}
  if(!id){setTimeout(()=>map.invalidateSize(),100);if(prior)$("mapTab").focus({preventScroll:true});}
 }
-$("refreshMap").onclick=async()=>{
- const button=$("refreshMap");
- button.disabled=true;button.textContent="↻ מרענן...";
- try{await loadPictures();}finally{button.disabled=false;button.textContent="↻ רענון";}
+$("refreshMap").onclick=()=>{
+ const formInProgress=Boolean($("photoFile").files?.length);
+ if(formInProgress&&!window.confirm("רענון הדף יבטל את עריכת התמונה הנוכחית. להמשיך?"))return;
+ window.location.reload();
 };
 $("mapTab").onclick=()=>openPanel(null);$("cameraTab").onclick=()=>openPanel("uploadPanel");$("galleryTab").onclick=()=>openPanel("galleryPanel");document.querySelectorAll(".closeSheet").forEach(b=>b.onclick=()=>openPanel(null));
 
