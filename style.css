@@ -33,3 +33,22 @@
 #uploadForm .check a{color:#a2ffe3}
 .reportLink{display:block;text-align:center;text-decoration:none;margin-top:10px;padding:12px;border-radius:10px;font-weight:bold}
 @media(max-width:440px){header strong{font-size:17px}.legalMenu summary{font-size:12px;padding:8px 6px}.legalMenu nav{right:-20px}header{padding:8px}header button{padding:9px 7px}}
+
+/* Accessibility improvements: keyboard skip, coordinate entry, focus */
+.srOnly{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.skipLink{position:absolute;top:-90px;right:15px;z-index:2000;color:#09251e;background:#f7ffee;padding:12px 16px;border:3px solid #0b6757;border-radius:10px;font-size:16px;font-weight:700}
+.skipLink:focus{top:8px}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid #ffe680;outline-offset:3px}
+.coordinateEntry{border:1px solid #6d959d;border-radius:12px;padding:12px;margin:0;min-width:0}
+.coordinateEntry legend{font-weight:700;padding:0 5px}
+.coordinateHelp{font-size:14px;line-height:1.65;margin:3px 0 10px;color:#e6f9f7}
+.coordinateFields{display:grid;grid-template-columns:1fr 1fr;gap:10px;min-width:0}
+.coordinateFields label{min-width:0;display:block}
+.coordinateFields input{width:100%;margin-top:6px;padding:12px 7px;border:1px solid #8db9b3;border-radius:8px;background:#09262c;color:#fff;font:inherit;font-variant-numeric:tabular-nums;direction:ltr;text-align:left}
+.coordinateEntry button{margin-top:10px}
+#coordinatesMessage{font-size:14px;line-height:1.65;margin:6px 0 0;color:#ffe5a0}
+#gallery:empty:before{content:"אין כרגע תמונות להצגה."}
+#galleryHeading:focus,#uploadHeading:focus{outline:none}
+@media(max-width:370px){.coordinateFields{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
+@media(forced-colors:active){button,input,select,textarea{border:1px solid ButtonText}}
