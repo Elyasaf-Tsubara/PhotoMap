@@ -41,10 +41,16 @@ Deno.serve(async(req:Request)=>{
    cleaned=await img.encodeJPEG({quality:82});
  }catch(err){console.error("image-clean",err instanceof Error?err.name:"decode");return answer({error:"Could not safely process this image"},422);}
  if(cleaned.byteLength>LIMIT)return answer({error:"Image exceeds size limit"},413);
+ const sourceKind=String(form.get("sourceKind")||"unknown");
+ if(!["camera","library","unknown"].includes(sourceKind))return answer({error:"Invalid photo source"},400);
+ const timeRaw=String(form.get("capturedAt")||"");
+ const capturedAt=timeRaw&&Number.isFinite(Date.parse(timeRaw))
+   &&Date.parse(timeRaw)>Date.parse("2000-01-01T00:00:00Z")
+   &&Date.parse(timeRaw)<Date.now()+3600000?new Date(timeRaw).toISOString():null;
  const path=crypto.randomUUID()+".jpg";
  const upload=await admin.storage.from("photos").upload(path,cleaned,{contentType:"image/jpeg",upsert:false});
  if(upload.error){console.error("storage",upload.error.message);return answer({error:"Storage temporarily unavailable"},500);}
- const saved=await admin.from("photos").insert({title,image_path:path,latitude:lat,longitude:lng,status:"pending"});
+ const saved=await admin.from("photos").insert({title,image_path:path,latitude:lat,longitude:lng,status:"pending",captured_at:capturedAt,source_kind:sourceKind});
  if(saved.error){console.error("db",saved.error.code);await admin.storage.from("photos").remove([path]);return answer({error:"Could not save photo"},500);}
  return answer({success:true,message:"Photo submitted for review"});
  }catch(err){console.error("upload-photo-secure",err instanceof Error?err.name:"unknown");return answer({error:"Upload unavailable"},500);}
