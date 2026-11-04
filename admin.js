@@ -119,20 +119,55 @@ async function setReport(report,next){
   renderReports();status("מצב הדיווח עודכן.");
  }catch(err){status("לא ניתן לעדכן דיווח: "+err.message,true);}
 }
+async function decideReport(report,decision){
+ const removing=decision==="remove_report_photo";
+ const photoName=report.photo_title||"התמונה המשויכת";
+ const question=removing
+  ? "להסיר מהאתר ולמחוק מהאחסון את התמונה ״"+photoName+"״? הפעולה בלתי הפיכה ואין אפשרות לשחזר את הקובץ."
+  : "להשאיר באתר את התמונה ״"+photoName+"״ ולסגור את בקשת ההסרה ללא מחיקה?";
+ if(!confirm(question))return;
+ const buttons=$("reportList").querySelectorAll("button");
+ buttons.forEach(button=>button.disabled=true);
+ status(removing?"מסיר תמונה וסוגר פנייה...":"משאיר תמונה וסוגר פנייה...");
+ try{
+  const result=await request("POST","",{action:decision,reportId:report.id});
+  reports=reports.map(r=>r.id===report.id
+   ?{...r,status:result.report_status,photo_status:result.photo_status}
+   :r);
+  if(removing)photos=photos.map(p=>p.id===report.photo_id?{...p,status:"rejected",image_url:null}:p);
+  renderReports();
+  status(removing?"התמונה הוסרה מהפרסום ומהאחסון. הפנייה סומנה כטופלה.":"התמונה נשארה באתר. בקשת ההסרה נסגרה ללא מחיקה.");
+ }catch(err){
+  status("הפעולה לא הושלמה: "+err.message+". יש לרענן ולבדוק שוב.",true);
+  await refresh();
+ }
+}
 function renderReports(){
  const list=$("reportList");clear(list);
  if(!reports.length){list.append(element("p","muted","אין דיווחים במערכת."));return;}
  for(const r of reports){
   const card=element("article","reportCard");
-  add(card,element("h3","",reasons[r.reason]||r.reason),
-   element("p","meta",date(r.created_at)+" · "+r.status),
+  const title=r.photo_id?(r.photo_title||"תמונה לא זמינה"):"פנייה כללית (ללא תמונה)";
+  add(card,
+   element("h3","",reasons[r.reason]||r.reason),
+   element("p","meta",date(r.created_at)+" · "+({new:"חדשה",in_review:"בטיפול",resolved:"טופלה",rejected:"נסגרה ללא הסרה"})[r.status]),
+   element("p","reportPhotoTitle","שם התמונה: "+title),
    element("p","reportText",r.details),
-   element("p","meta","תמונה: "+(r.photo_id||"פנייה כללית")),
    element("p","meta","דוא״ל: "+(r.contact_email||"לא נמסר")));
   const actions=element("div","actions");
-  if(r.status!=="in_review")actions.append(actionButton("בטיפול",()=>setReport(r,"in_review"),"ghost"));
-  if(r.status!=="resolved")actions.append(actionButton("טופל",()=>setReport(r,"resolved")));
-  if(r.status!=="rejected")actions.append(actionButton("סגור ללא טיפול",()=>setReport(r,"rejected"),"danger"));
+  const open=["new","in_review"].includes(r.status);
+  if(open){
+   if(r.photo_id&&r.photo_status){
+    actions.append(actionButton("הסר תמונה",()=>decideReport(r,"remove_report_photo"),"danger"));
+    if(r.photo_status!=="rejected")actions.append(actionButton("השאר תמונה",()=>decideReport(r,"keep_report_photo"),"ghost"));
+   }else if(r.photo_id){
+    actions.append(element("p","muted","התמונה לא נמצאה. יש לטפל בפנייה ידנית."));
+   }
+   if(r.status==="new")actions.append(actionButton("בטיפול",()=>setReport(r,"in_review"),"ghost"));
+   if(!r.photo_id)actions.append(actionButton("סמן כטופל",()=>setReport(r,"resolved")));
+  }else{
+   actions.append(element("span","tag",r.status==="resolved"?"טופל — התמונה הוסרה / הפנייה נסגרה":"נסגרה ללא הסרת תמונה"));
+  }
   card.append(actions);list.append(card);
  }
 }
