@@ -222,7 +222,7 @@ async function chooseFile(input,kind){
  const file=input.files[0],status=$("uploadStatus");
  if(!file)return;
  selectedUploadFile=null;sourceKind=kind;captureTime=null;
- $("photoFile").value=input===$("photoFile")?input.value:"";
+ if(input!==$("photoFile"))$("photoFile").value="";
  if(input!==$("cameraFile"))$("cameraFile").value="";
  if(!file.type.startsWith("image/")||file.size>maxBytes){status.textContent="בחר תמונה מסוג נתמך עד 8MB";input.value="";window.PhotoMapEditor?.reset();return;}
  if(!window.PhotoMapEditor){status.textContent="עורך טשטוש לא נטען. רענן את הדף.";return;}
