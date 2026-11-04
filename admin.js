@@ -2,7 +2,24 @@
 const $=id=>document.getElementById(id);
 const cfg=window.PHOTO_MAP_CONFIG||{};
 const ADMIN="photomap.support@gmail.com";
-const client=window.supabase?.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey);
+// Only Supabase session tokens are retained; the user's password is never stored by this application.
+const REMEMBER_KEY="photomap-admin-remember";
+let remember=true;
+try{remember=localStorage.getItem(REMEMBER_KEY)!=="no";}catch{remember=false;}
+const sessionStorageAdapter={
+ getItem(key){try{return (remember?localStorage:sessionStorage).getItem(key);}catch{return null;}},
+ setItem(key,value){
+  try{
+   (remember?localStorage:sessionStorage).setItem(key,value);
+   (remember?sessionStorage:localStorage).removeItem(key);
+  }catch{ /* Private browsing may restrict persistence. */ }
+ },
+ removeItem(key){try{localStorage.removeItem(key);}catch{}try{sessionStorage.removeItem(key);}catch{}}
+};
+const client=window.supabase?.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{
+ auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storage:sessionStorageAdapter}
+});
+$("rememberDevice").checked=remember;
 let photos=[],reports=[],section="photos",loading=false;
 function status(message,bad=false,where="adminStatus"){
  const element=$(where);element.textContent=message;element.classList.toggle("error",bad);
@@ -174,6 +191,8 @@ function renderReports(){
 $("loginForm").onsubmit=async event=>{
  event.preventDefault();
  if(!client)return status("החיבור לשרת אינו זמין",true,"loginStatus");
+ remember=$("rememberDevice").checked;
+ try{localStorage.setItem(REMEMBER_KEY,remember?"yes":"no");}catch{}
  const password=$("adminPassword").value;
  if(password.length<8)return status("יש להזין סיסמת מנהל באורך שמונה תווים לפחות.",true,"loginStatus");
  $("loginButton").disabled=true;status("מאמת הרשאות...",false,"loginStatus");
@@ -206,7 +225,7 @@ $("otpForm").onsubmit=async event=>{
   await authenticate();
  }catch(err){status("אימות הקוד נכשל: "+err.message,true,"loginStatus");}
 };
-$("logout").onclick=async()=>{await client.auth.signOut();location.reload();};
+$("logout").onclick=async()=>{await client.auth.signOut({scope:"local"});location.reload();};
 $("reload").onclick=refresh;
 $("photosTab").onclick=()=>switchSection("photos");
 $("reportsTab").onclick=()=>switchSection("reports");
