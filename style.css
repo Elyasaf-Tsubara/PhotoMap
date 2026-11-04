@@ -52,3 +52,87 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 @media(max-width:370px){.coordinateFields{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
 @media(forced-colors:active){button,input,select,textarea{border:1px solid ButtonText}}
+
+
+/* PhotoMap glass design — v46. Readable, high-contrast Apple-inspired glass surfaces. */
+:root{--ink:#183039;--muted:#536973;--accent:#087e73;--accent2:#16b7a4;--glass:rgba(255,255,255,.76);--hairline:rgba(255,255,255,.78);--lift:0 16px 50px rgba(16,44,54,.17),inset 0 1px 0 rgba(255,255,255,.86)}
+html{color-scheme:light;scroll-behavior:smooth}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:var(--ink);background:linear-gradient(145deg,#d9f0ec,#edf7f8 54%,#d0e6f7);font-size:16px}
+button,input,textarea,select{font:inherit}
+button{border:1px solid rgba(255,255,255,.4);border-radius:17px;padding:12px 16px;background:linear-gradient(145deg,#3be3c9,#15bba9);color:#063e3a;box-shadow:inset 0 1px 0 rgba(255,255,255,.66),0 5px 16px rgba(12,117,106,.12);transition:transform .14s ease,box-shadow .14s ease,filter .14s ease}
+button:active:not(:disabled){transform:scale(.975)}button:hover:not(:disabled){filter:brightness(1.035)}button:disabled{opacity:.5;cursor:not-allowed;box-shadow:none}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid #056b9e;outline-offset:3px}
+header{height:72px;padding:10px 18px;background:linear-gradient(135deg,rgba(250,255,255,.85),rgba(225,245,246,.72));-webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);border-bottom:1px solid rgba(255,255,255,.85);box-shadow:0 3px 24px rgba(20,70,74,.11);color:var(--ink)}
+header strong{font-size:21px;font-weight:800;letter-spacing:-.55px;color:#133945}
+header small{color:#506c75;font-size:12px}
+header button{background:rgba(255,255,255,.65);border:1px solid #fff;color:#194650;box-shadow:inset 0 1px 0 #fff}
+.brandDot{color:#00aa96;display:inline;font-size:13px;vertical-align:middle}
+main{height:calc(100dvh - 72px)}
+#map{background:#cbdcd5}
+.bottomNav{position:fixed;z-index:820;bottom:max(12px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:min(560px,calc(100% - 28px));height:68px;padding:8px;gap:7px;border-radius:26px;background:linear-gradient(140deg,rgba(251,255,255,.83),rgba(241,253,253,.66));-webkit-backdrop-filter:blur(28px) saturate(170%);backdrop-filter:blur(28px) saturate(170%);border:1px solid rgba(255,255,255,.95);box-shadow:var(--lift);align-items:stretch}
+.bottomNav button{display:flex;align-items:center;justify-content:center;flex:1;margin:0;padding:9px 5px;border-radius:20px;background:transparent;color:#32505d;box-shadow:none;border:1px solid transparent;font-size:14px;font-weight:700}
+.bottomNav button.selected{background:rgba(20,160,142,.16);color:#075a50;border-color:rgba(18,156,140,.16);box-shadow:inset 0 1px 2px rgba(255,255,255,.8)}
+.sheet{position:fixed;z-index:850;inset:83px 14px 12px auto;width:min(530px,calc(100% - 28px));border-radius:30px;padding:23px;overflow:auto;overscroll-behavior:contain;background:linear-gradient(150deg,rgba(255,255,255,.94),rgba(235,251,252,.9));-webkit-backdrop-filter:blur(35px) saturate(150%);backdrop-filter:blur(35px) saturate(150%);border:1px solid #fff;box-shadow:0 24px 75px rgba(12,43,50,.21);color:var(--ink)}
+.sheetHead{position:sticky;z-index:2;top:-23px;padding:10px 0 16px;background:rgba(247,254,254,.87);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-bottom:1px solid rgba(22,72,78,.09);margin-bottom:17px}
+.sheetHead h2{font-size:22px;letter-spacing:-.5px}
+.closeSheet,.secondary{background:rgba(225,240,242,.92);border:1px solid #fff;color:#254750;box-shadow:inset 0 1px 0 #fff}
+.closeSheet{width:44px;height:44px;border-radius:16px}
+#uploadForm{gap:15px}
+#uploadForm label{font-weight:600;color:#223e47}
+#uploadForm input:not([type=checkbox]):not([type=file]):not([type=range]){background:rgba(255,255,255,.87);color:#173b44;border:1px solid #a6c1c6;min-height:47px}
+#uploadForm input:not([type=checkbox]):focus{border-color:#25a895}
+.uploadArea{min-height:130px;background:linear-gradient(135deg,rgba(226,249,245,.93),rgba(232,245,255,.82));border:2px dashed #72b7b0;border-radius:23px;font-size:16px;letter-spacing:-.2px}
+.uploadArea input{background:transparent;color:#20424b}
+.positionActions button{border-radius:17px}
+.positionActions{gap:10px}
+#positionText{color:#49646e}
+.coordinateEntry{border-color:#bad8d8;border-radius:20px;background:rgba(235,248,248,.73)}
+.coordinateHelp{color:#4d6a70}
+.coordinateFields input{background:#fff!important;color:#1a3b42!important;border:1px solid #9bbdc1!important;border-radius:13px}
+#coordinatesMessage{color:#5b4632}
+.positionPreview{color:#155a57;background:rgba(31,191,166,.1);border:1px solid rgba(37,142,135,.14);border-radius:16px}
+#uploadForm .check{padding:10px 12px;border-radius:15px;background:rgba(244,249,249,.88);border:1px solid rgba(149,182,183,.25)}
+#uploadForm .check a{color:#066e67}
+#uploadForm .check input[type=checkbox]{width:19px;height:19px;accent-color:#088c7e}
+#publish{padding:15px;font-size:16px;border-radius:18px;min-height:54px;color:#064b42}
+#uploadStatus{color:#0b6254;font-weight:600}
+.legalMenu summary{background:rgba(255,255,255,.75);border:1px solid #fff;box-shadow:inset 0 1px 0 #fff;color:#24505b;font-size:13px;padding:11px 14px;border-radius:16px}
+.legalMenu nav{background:rgba(255,255,255,.97);border:1px solid #fff;box-shadow:0 18px 45px #163c4b2a;border-radius:18px;min-width:200px}
+.legalMenu nav a{color:#1d5157;font-size:15px}
+.counter{background:rgba(255,255,255,.88);border:1px solid white;-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);border-radius:20px;padding:10px 17px;bottom:106px;color:#1c4a4d;box-shadow:0 10px 30px #174a4a28}
+.pickerBanner{background:rgba(255,255,255,.94);border:1px solid white;border-radius:21px;color:#244651;-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px)}
+.notice{border-radius:20px;background:rgba(255,249,227,.94);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.gallery{gap:13px}
+.tile{border:1px solid white;background:rgba(255,255,255,.83);border-radius:21px;color:#183f45;box-shadow:0 8px 25px rgba(21,63,71,.08)}
+.tile img{border-radius:18px 18px 0 0}
+.tile span{font-size:14px;font-weight:650}
+dialog{background:linear-gradient(135deg,#f7ffff,#e9f7f7);color:#1a3e43;border:1px solid white;box-shadow:var(--lift);border-radius:27px}
+#closePhoto{background:rgba(227,240,244,.85);color:#244550}
+.reportLink{background:rgba(211,241,237,.76);color:#076b64;border:1px solid rgba(9,114,100,.18)}
+.editorPanel{display:grid;gap:12px;background:rgba(246,252,253,.85);border:1px solid #d1e6e5;border-radius:23px;padding:13px;box-shadow:inset 0 1px 0 white}
+.editorPanel[hidden]{display:none}
+.editorHead{display:flex;align-items:start;justify-content:space-between;gap:10px}
+.editorHead h3{margin:0;font-size:18px;letter-spacing:-.25px}
+.editorHead p{font-size:12px;color:#58747a;margin:4px 0 0;font-weight:400}
+.privacyPill{flex:0 0 auto;background:#d4f2ea;border-radius:100px;color:#126854;font-size:11px;padding:6px 10px;font-weight:700}
+.editorCanvasWrap{background:repeating-conic-gradient(#dae5e5 0 25%,#f6fcfc 0 50%) 50% / 22px 22px;overflow:hidden;border-radius:17px;min-height:130px;display:grid;place-items:center;border:1px solid #bfd1d4}
+#editCanvas{display:block;max-width:100%;height:auto;max-height:48dvh;object-fit:contain;touch-action:none;cursor:crosshair}
+#editorStatus{margin:0;font-size:13px;line-height:1.5;font-weight:650;color:#145b59}
+#editorStatus.error{color:#aa282d}
+.editorCount{font-size:12px;color:#486c73;margin:0}
+.blurTools{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.blurTools button{background:#e5f0f1;color:#31565b;font-size:13px;padding:11px 5px;border-radius:15px;box-shadow:none}
+.blurTools button.selected{background:linear-gradient(135deg,#126c69,#118a7e);color:white}
+.blurTools #blurDetect{grid-column:span 2;background:#d8f4ee;color:#12685d}
+.brushControl{display:flex!important;gap:12px;align-items:center;color:#3f5b61;font-size:13px!important;font-weight:600}
+.brushControl input{width:100%;flex:1;accent-color:#118b7a}
+.brushControl output{min-width:30px;text-align:center}
+.blurActions{display:flex;gap:7px}
+.blurActions button{flex:1;background:#edf5f5;color:#35595e;border:1px solid white;border-radius:13px;box-shadow:none;font-size:12px;padding:10px 5px}
+.editorTip{font-size:12px;line-height:1.55;color:#456972;background:rgba(235,244,250,.68);padding:10px;border-radius:14px;margin:0}
+@media(max-width:750px){.sheet{top:78px;bottom:10px;left:9px;right:9px;width:auto;border-radius:26px;padding:18px}.sheetHead{top:-18px}.bottomNav{bottom:max(10px,env(safe-area-inset-bottom));width:calc(100% - 22px)}}
+@media(max-width:440px){header{padding:10px 12px;height:68px}header strong{font-size:19px}main{height:calc(100dvh - 68px)}header small{font-size:11px}.legalMenu summary{padding:9px 8px}.bottomNav{height:65px}.bottomNav button{font-size:13px}.sheet{top:75px;padding:15px}.privacyPill{font-size:10px;padding:5px 7px}.editorCanvasWrap{min-height:90px}}
+@supports not ((backdrop-filter:blur(5px)) or (-webkit-backdrop-filter:blur(5px))){header,.sheet,.bottomNav,.pickerBanner{background:rgba(247,254,254,.97)}}
+@media(prefers-reduced-transparency:reduce){header,.sheet,.bottomNav,.pickerBanner{background:#f7fdfd;-webkit-backdrop-filter:none;backdrop-filter:none}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}button{transition:none}}
+@media(forced-colors:active){header,.sheet,.bottomNav,.editorPanel{border:2px solid CanvasText}button{border:1px solid ButtonText}}
