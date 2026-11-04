@@ -20,7 +20,7 @@ const client=window.supabase?.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{
  auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storage:sessionStorageAdapter}
 });
 $("rememberDevice").checked=remember;
-let photos=[],reports=[],section="photos",loading=false;
+let photos=[],reports=[],comments=[],section="photos",loading=false;
 function status(message,bad=false,where="adminStatus"){
  const element=$(where);element.textContent=message;element.classList.toggle("error",bad);
 }
@@ -68,9 +68,12 @@ async function refresh(){
   if(section==="photos"){
    const result=await request("GET","?type=photos");photos=result.photos||[];
    renderPhotos();
-  }else{
+  }else if(section==="reports"){
    const result=await request("GET","?type=reports");reports=result.reports||[];
    renderReports();
+  }else{
+   const result=await request("GET","?type=comments");comments=result.comments||[];
+   renderAdminComments();
   }
   status("הנתונים עודכנו ב־"+new Date().toLocaleTimeString("he-IL"));
  }catch(err){status("שגיאה: "+err.message,true);}
@@ -80,7 +83,8 @@ function switchSection(next){
  section=next;
  $("photosSection").hidden=next!=="photos";
  $("reportsSection").hidden=next!=="reports";
- for(const [id,active] of [["photosTab",next==="photos"],["reportsTab",next==="reports"]]){
+ $("commentsSection").hidden=next!=="comments";
+ for(const [id,active] of [["photosTab",next==="photos"],["reportsTab",next==="reports"],["commentsTab",next==="comments"]]){
   $(id).classList.toggle("active",active);$(id).setAttribute("aria-pressed",String(active));
  }
  refresh();
@@ -188,6 +192,30 @@ function renderReports(){
   card.append(actions);list.append(card);
  }
 }
+async function moderateComment(comment,next){
+ if(!confirm((next==="approved"?"לאשר ולפרסם":"לדחות")+" את התגובה של "+comment.display_name+"?"))return;
+ try{
+  const result=await request("POST","",{action:"comment_status",commentId:comment.id,status:next});
+  comments=comments.map(c=>c.id===comment.id?{...c,status:result.status}:c);
+  renderAdminComments();
+  status(next==="approved"?"התגובה אושרה ותופיע לציבור.":"התגובה נדחתה.");
+ }catch(error){status("לא ניתן לעדכן תגובה: "+error.message,true);}
+}
+function renderAdminComments(){
+ const list=$("adminCommentsList");clear(list);
+ const pending=comments.filter(c=>c.status==="pending");
+ if(!pending.length){list.append(element("p","muted","אין תגובות שממתינות לאישור."));return;}
+ for(const c of pending){
+  const card=element("article","reportCard");
+  add(card,element("h3","",c.photo_title),
+   element("p","meta","מאת: "+c.display_name+" · "+date(c.created_at)),
+   element("p","reportText",c.body));
+  const actions=element("div","actions");
+  actions.append(actionButton("אשר תגובה",()=>moderateComment(c,"approved")));
+  actions.append(actionButton("דחה תגובה",()=>moderateComment(c,"rejected"),"danger"));
+  card.append(actions);list.append(card);
+ }
+}
 $("loginForm").onsubmit=async event=>{
  event.preventDefault();
  if(!client)return status("החיבור לשרת אינו זמין",true,"loginStatus");
@@ -229,6 +257,7 @@ $("logout").onclick=async()=>{await client.auth.signOut({scope:"local"});locatio
 $("reload").onclick=refresh;
 $("photosTab").onclick=()=>switchSection("photos");
 $("reportsTab").onclick=()=>switchSection("reports");
+$("commentsTab").onclick=()=>switchSection("comments");
 $("photoFilter").onchange=renderPhotos;
 if(client){
  client.auth.onAuthStateChange((event)=>{if(event==="SIGNED_IN"||event==="SIGNED_OUT")setTimeout(authenticate,0);});
