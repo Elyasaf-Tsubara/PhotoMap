@@ -3,11 +3,14 @@
  const $=id=>document.getElementById(id);
  const originals=document.createElement("canvas"), source=originals.getContext("2d",{willReadFrequently:false});
  const canvas=$("editCanvas"),ctx=canvas.getContext("2d",{willReadFrequently:false});
- const state={ready:false,detected:false,loading:false,ops:[],redo:[],mode:"brush",active:null,faces:0,serial:0};
+ const state={ready:false,detected:false,fallback:false,loading:false,ops:[],redo:[],mode:"brush",active:null,faces:0,serial:0};
  let detectorPromise=null;
  const msg=(value,bad=false)=>{const el=$("editorStatus");el.textContent=value;el.classList.toggle("error",bad);};
  const changed=()=>{const el=$("editorCount");el.textContent=state.faces+" פנים טושטשו אוטומטית · "+state.ops.length+" פעולות ידניות/אוטומטיות";};
- const enable=()=>{$("publish").disabled=!state.ready||!state.detected||state.loading;$("blurUndo").disabled=!state.ops.some(op=>op.kind!=="face");$("blurRedo").disabled=!state.redo.length;$("blurReset").disabled=!state.ops.length;};
+ const hasManualMasks=()=>state.ops.some(op=>op.kind==="rect"||op.kind==="stroke");
+ const manuallyReviewed=()=>state.fallback&&hasManualMasks()&&$("manualReviewConsent").checked;
+ const canUpload=()=>state.ready&&!state.loading&&(state.detected||manuallyReviewed());
+ const enable=()=>{$("publish").disabled=!canUpload();$("blurUndo").disabled=!state.ops.some(op=>op.kind!=="face");$("blurRedo").disabled=!state.redo.length;$("blurReset").disabled=!state.ops.length;};
  const fit=(value,min,max)=>Math.min(max,Math.max(min,value));
  function pixelate(x,y,w,h,round=false){
   x=fit(Math.round(x),0,canvas.width);y=fit(Math.round(y),0,canvas.height);
@@ -86,10 +89,11 @@
  };
  $("blurBrush").onclick=()=>setMode("brush");$("blurRectangle").onclick=()=>setMode("rect");
  $("blurDetect").onclick=()=>detectFaces();
+ $("manualReviewConsent").onchange=()=>{enable();if(manuallyReviewed())msg("הבדיקה הידנית אושרה. התמונה תעבור גם אישור מנהל לפני פרסום.");};
  $("brushSize").oninput=()=>{$("brushValue").textContent=$("brushSize").value;};
  async function getDetector(){
   if(!detectorPromise)detectorPromise=(async()=>{
-   const {FilesetResolver,FaceDetector}=await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/+esm");
+   const {FilesetResolver,FaceDetector}=await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/vision_bundle.mjs");
    const files=await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/wasm");
    return FaceDetector.createFromOptions(files,{
     baseOptions:{modelAssetPath:"https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite",delegate:"CPU"},
@@ -100,7 +104,7 @@
  }
  async function detectFaces(){
   if(!state.ready||state.loading)return;
-  const version=state.serial;state.loading=true;state.detected=false;enable();
+  const version=state.serial;state.loading=true;state.detected=false;state.fallback=false;$("manualReviewFallback").hidden=true;$("manualReviewConsent").checked=false;enable();
   msg("מזהה פנים במכשיר שלך... התמונה אינה נשלחת לשירות זיהוי.");
   try{
    const detector=await getDetector();
@@ -116,19 +120,22 @@
     const right=Math.min(canvas.width,b.originX+b.width*(1+pad)),bottom=Math.min(canvas.height,b.originY+b.height*(1+pad));
     if(right>x&&bottom>y){state.ops.unshift({kind:"face",x,y,w:right-x,h:bottom-y});state.faces++;}
    }
-   state.detected=true;state.redo=[];draw();
+   state.detected=true;state.fallback=false;state.redo=[];draw();
    msg(state.faces
     ?"טושטשו אוטומטית "+state.faces+" פנים. בדוק שלא פספסנו פנים, לוחיות רישוי או פרטים מזהים."
     :"לא זוהו פנים בתמונה. בדוק בעצמך והוסף טשטוש ידני היכן שצריך.");
   }catch(error){
    if(version!==state.serial)return;
    state.detected=false;
-   msg("זיהוי הפנים לא זמין כרגע. נסה שוב. מטעמי פרטיות לא ניתן להעלות לפני שהבדיקה פועלת.",true);
+   state.fallback=true;
+   $("manualReviewFallback").hidden=false;
+   msg("לא הצלחנו להפעיל זיהוי פנים אוטומטי. אפשר לנסות שוב, או לטשטש ידנית את כל הפנים והפרטים המזהים ולאשר את הבדיקה הידנית. עדיין נדרש אישור מנהל לפרסום.",true);
    console.warn("PhotoMap face model unavailable",error?.name||"error");
   }finally{if(version===state.serial){state.loading=false;draw();}}
  }
  async function load(file){
-  const version=++state.serial;state.ready=false;state.detected=false;state.loading=true;
+  const version=++state.serial;state.ready=false;state.detected=false;state.fallback=false;state.loading=true;
+  $("manualReviewFallback").hidden=true;$("manualReviewConsent").checked=false;
   state.faces=0;state.ops=[];state.redo=[];$("editorPanel").hidden=false;enable();
   msg("פותח תמונה ומכין עורך טשטוש...");
   let bitmap=null,url=null;
@@ -155,12 +162,13 @@
   if(version===state.serial&&state.ready)await detectFaces();
  }
  function reset(){
-  state.serial++;state.ready=false;state.detected=false;state.loading=false;
+  state.serial++;state.ready=false;state.detected=false;state.fallback=false;state.loading=false;
+  $("manualReviewFallback").hidden=true;$("manualReviewConsent").checked=false;
   state.ops=[];state.redo=[];state.active=null;state.faces=0;
   $("editorPanel").hidden=true;msg("");changed();enable();
  }
  async function exportBlob(){
-  if(!state.ready||!state.detected||state.loading)throw Error("חובה להשלים זיהוי פנים וטשטוש לפני העלאה");
+  if(!canUpload())throw Error("יש להשלים זיהוי פנים או לטשטש ידנית ולאשר את בדיקת הפרטיות לפני העלאה");
   if(state.active)throw Error("סיים את פעולת הטשטוש לפני העלאה");
   draw();
   const blob=await new Promise((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(Error("יצוא תמונה נכשל")),"image/jpeg",.83));
@@ -168,5 +176,5 @@
   return blob;
  }
  reset();
- window.PhotoMapEditor={load,reset,exportBlob,isReady:()=>state.ready&&state.detected&&!state.loading};
+ window.PhotoMapEditor={load,reset,exportBlob,isReady:canUpload};
 })();
