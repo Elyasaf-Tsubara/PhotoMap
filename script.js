@@ -1,9 +1,9 @@
-"use strict";const $=id=>document.getElementById(id);const config=window.PHOTO_MAP_CONFIG||{};const ready=Boolean(config.supabaseUrl&&config.supabaseAnonKey&&window.supabase);const db=ready?window.supabase.createClient(config.supabaseUrl,config.supabaseAnonKey):null;const map=L.map("map",{zoomControl:false}).setView([31.78,35.22],8);L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'}).addTo(map);L.control.zoom({position:"bottomright",zoomInTitle:"התקרב",zoomOutTitle:"התרחק"}).addTo(map);let pictures=[],markers=L.layerGroup().addTo(map),selectedLocation=null;const maxBytes=8*1024*1024;
+"use strict";const $=id=>document.getElementById(id);const config=window.PHOTO_MAP_CONFIG||{};const ready=Boolean(config.supabaseUrl&&config.supabaseAnonKey&&window.supabase);const db=ready?window.supabase.createClient(config.supabaseUrl,config.supabaseAnonKey):null;const map=L.map("map",{zoomControl:false}).setView([31.78,35.22],8);L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'}).addTo(map);L.control.zoom({position:"bottomright",zoomInTitle:"התקרב",zoomOutTitle:"התרחק"}).addTo(map);let pictures=[],markers=L.layerGroup().addTo(map),selectedLocation=null,selectedLocationConfirmed=false,selectedUploadFile=null,sourceKind="unknown",captureTime=null,activePhotoId=null;const maxBytes=8*1024*1024;
 function notice(message){$("mapNotice").textContent=message;$("mapNotice").hidden=false;}
 if(!ready)notice("מצב הדגמה: המפה פעילה, אבל פרסום ושיתוף תמונות יפעלו רק לאחר חיבור מאגר Supabase.");
 let captchaWidgetId=null;let captchaToken="";function mountCaptcha(){if(captchaWidgetId!==null||!window.turnstile||!config.turnstileSiteKey)return;captchaWidgetId=window.turnstile.render("#turnstileWidget",{sitekey:config.turnstileSiteKey,callback:token=>{captchaToken=token;}, "expired-callback":()=>{captchaToken="";},"error-callback":()=>{captchaToken="";}});}function openPanel(id){
  const prior=$("uploadPanel").hidden?($("galleryPanel").hidden?null:"galleryPanel"):"uploadPanel";
- if(id==="uploadPanel"){let tries=0;const poll=setInterval(()=>{mountCaptcha();tries++;if(captchaWidgetId!==null||tries>=60)clearInterval(poll);},200);}
+ if(id==="uploadPanel"){let tries=0;const poll=setInterval(()=>{mountCaptcha();tries++;if(captchaWidgetId!==null||tries>=60)clearInterval(poll);},200);if(!selectedLocation&&!locationRequesting){detectDefaultLocation();}}
  $("galleryPanel").hidden=id!=="galleryPanel";
  $("uploadPanel").hidden=id!=="uploadPanel";
  $("mainContent").inert=Boolean(id);
@@ -16,13 +16,36 @@ let captchaWidgetId=null;let captchaToken="";function mountCaptcha(){if(captchaW
  if(!id){setTimeout(()=>map.invalidateSize(),100);if(prior)$("mapTab").focus({preventScroll:true});}
 }
 $("refreshMap").onclick=()=>{
- const formInProgress=Boolean($("photoFile").files?.length);
+ const formInProgress=Boolean(selectedUploadFile);
  if(formInProgress&&!window.confirm("רענון הדף יבטל את עריכת התמונה הנוכחית. להמשיך?"))return;
  window.location.reload();
 };
 $("mapTab").onclick=()=>openPanel(null);$("cameraTab").onclick=()=>openPanel("uploadPanel");$("galleryTab").onclick=()=>openPanel("galleryPanel");document.querySelectorAll(".closeSheet").forEach(b=>b.onclick=()=>openPanel(null));
 
 let currentLocationMarker=null, currentAccuracyCircle=null, selectedLocationMarker=null, pickingPosition=false;
+let locationRequesting=false;
+function locationSummary(){
+ const summary=$("locationSummary");
+ if(!selectedLocation){summary.textContent="המיקום לא נקבע. ניתן לנסות שוב או לבחור במפה.";return;}
+ const accuracy=selectedLocation.accuracy!=null?" · דיוק משוער "+Math.round(selectedLocation.accuracy)+" מטר":"";
+ summary.textContent=(selectedLocationConfirmed?"✓ המיקום אושר":"מיקום מוצע — יש לאשר")+accuracy;
+ $("confirmSelectedLocation").disabled=selectedLocationConfirmed;
+ $("confirmSelectedLocation").textContent=selectedLocationConfirmed?"✓ המיקום אושר":"✓ אישור המיקום";
+}
+async function detectDefaultLocation(){
+ if(locationRequesting||selectedLocation)return;
+ locationRequesting=true;
+ $("locationSummary").textContent="מאתר את המיקום הנוכחי…";
+ try{const p=await getLocation();if(!selectedLocation){setSelectedPosition(p,"המיקום הנוכחי");showCurrentPosition(p);}}
+ catch(error){$("locationSummary").textContent="לא הצלחנו לזהות מיקום: "+explainLocationError(error);$("locationOptions").open=true;}
+ finally{locationRequesting=false;}
+}
+$("confirmSelectedLocation").onclick=()=>{
+ if(!selectedLocation){$("locationSummary").textContent="בחר מיקום לפני האישור.";return;}
+ selectedLocationConfirmed=true;locationSummary();$("locationOptions").open=false;
+};
+$("changePosition").onclick=()=>{$("locationOptions").open=true;$("locationSummary").textContent="בחר אפשרות לשינוי המיקום ולחץ שוב על אישור המיקום.";};
+
 function explainLocationError(error){
   if(!window.isSecureContext)return "מיקום זמין רק באתר מאובטח (HTTPS).";
   if(error&&error.code===1)return "הרשאת מיקום חסומה. לחץ על הסמל שליד כתובת האתר ואפשר Location, ובדוק ששירותי המיקום במכשיר פועלים.";
@@ -86,11 +109,13 @@ document.addEventListener("keydown",event=>{
 
 function setSelectedPosition(p,source){
   selectedLocation={lat:p.lat,lng:p.lng,accuracy:p.accuracy??null};
+  selectedLocationConfirmed=false;locationSummary();
   if(!selectedLocationMarker){
     selectedLocationMarker=L.marker([p.lat,p.lng],{draggable:true,autoPan:true,title:"גרור אותי כדי לדייק את מיקום התמונה"}).addTo(map);
     selectedLocationMarker.on("dragend",()=>{
       const point=selectedLocationMarker.getLatLng();
       selectedLocation={lat:point.lat,lng:point.lng,accuracy:null};
+      selectedLocationConfirmed=false;locationSummary();
       updateSelectedPositionText("מיקום מדויק ידנית");
       $("manualLat").value=point.lat.toFixed(6);$("manualLng").value=point.lng.toFixed(6);
       displayPublishPosition();
@@ -143,7 +168,7 @@ $("cancelPick").onclick=()=>{
   if(positionBeforePicker){
     setSelectedPosition(positionBeforePicker,"המיקום הקודם");
   }else{
-    selectedLocation=null;
+    selectedLocation=null;selectedLocationConfirmed=false;locationSummary();
     if(selectedLocationMarker){map.removeLayer(selectedLocationMarker);selectedLocationMarker=null;}
     $("positionText").textContent="לא נבחר מיקום. אפשר לקבל GPS או לבחור נקודה במפה.";displayPublishPosition();
   }
@@ -186,11 +211,11 @@ async function loadPictures(){
 }
 $("uploadForm").onsubmit=async e=>{
  e.preventDefault();
- const file=$("photoFile").files[0],title=$("photoTitle").value.trim(),status=$("uploadStatus");
+ const file=selectedUploadFile,title=$("photoTitle").value.trim(),status=$("uploadStatus");
  if(!window.PhotoMapEditor?.isReady()){status.textContent="בחר תמונה והשלם את בדיקת הפנים והטשטוש לפני השליחה.";return;}
  if(!ready){status.textContent="חיבור לשרת עדיין אינו זמין";return;}
  if(!file){status.textContent="יש לבחור תמונה";return;}
- if(!selectedLocation){status.textContent="יש לבחור מיקום לפני השליחה";return;}
+ if(!selectedLocation||!selectedLocationConfirmed){status.textContent="יש ללחוץ על אישור המיקום לפני השליחה";return;}
  if(!$("adultConsent").checked||!$("rightsConsent").checked||!$("locationConsent").checked){status.textContent="יש לאשר גיל, זכויות ומדיניות פרטיות";return;}
  if(!captchaToken){status.textContent="יש להשלים בדיקת אבטחה";mountCaptcha();return;}
  const button=$("publish");
@@ -206,13 +231,15 @@ $("uploadForm").onsubmit=async e=>{
   form.append("latitude",String(latitude));form.append("longitude",String(longitude));
   form.append("confirmRights","yes");form.append("confirmLocation","yes");form.append("adult","yes");
   form.append("captchaToken",captchaToken);
+  form.append("sourceKind",sourceKind);
+  if(captureTime)form.append("capturedAt",captureTime);
   status.textContent="שולח תמונה לבדיקה...";
   const response=await fetch(config.supabaseUrl+"/functions/v1/upload-photo-secure",{method:"POST",headers:{"apikey":config.supabaseAnonKey},body:form});
   const raw=await response.text();let data={};
   try{data=JSON.parse(raw);}catch{throw Error("השרת החזיר תשובה לא צפויה (HTTP "+response.status+")");}
   if(!response.ok||!data.success)throw Error("HTTP "+response.status+": "+(data.error||"Upload failed"));
   status.textContent="התמונה התקבלה ונשמרה לבדיקה. היא תופיע במפה רק לאחר אישור.";
-  $("uploadForm").reset();window.PhotoMapEditor.reset();selectedLocation=null;
+  $("uploadForm").reset();window.PhotoMapEditor.reset();selectedLocation=null;selectedLocationConfirmed=false;selectedUploadFile=null;captureTime=null;sourceKind="unknown";locationSummary();$("fileSelection").textContent="בחר תמונה קיימת או צלם חדשה";
   if(selectedLocationMarker){map.removeLayer(selectedLocationMarker);selectedLocationMarker=null;}
   displayPublishPosition();
  }catch(error){status.textContent="העלאה נכשלה: "+error.message;}
