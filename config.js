@@ -3,5 +3,5 @@ window.PHOTO_MAP_CONFIG = {
   supabaseUrl: "https://bbiwysjmdcvcdrrrfpbs.supabase.co",
   supabaseAnonKey: "sb_publishable_SnEEA-Ilb-zCwbuOl8RO8A_Bo0ELF37",
   turnstileSiteKey: "0x4AAAAAAFzt7u960s5iJ4Sn",
-  reportEmail: ""
+  reportEmail: "photomap.support@gmail.com"
 };
