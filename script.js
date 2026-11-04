@@ -15,6 +15,20 @@ let captchaWidgetId=null;let captchaToken="";function mountCaptcha(){if(captchaW
  if(id && id!==prior){const heading=$(id==="uploadPanel"?"uploadHeading":"galleryHeading");heading.focus({preventScroll:true});}
  if(!id){setTimeout(()=>map.invalidateSize(),100);if(prior)$("mapTab").focus({preventScroll:true});}
 }
+// Safari may consume pull-to-refresh over the interactive map.
+// Allow a downward swipe on the header as an additional refresh gesture.
+let refreshTouchStart=null;
+const pageHeader=document.querySelector("body > header");
+pageHeader.addEventListener("touchstart",event=>{
+ if(event.touches.length===1)refreshTouchStart={y:event.touches[0].clientY,x:event.touches[0].clientX};
+},{passive:true});
+pageHeader.addEventListener("touchend",event=>{
+ if(!refreshTouchStart||!event.changedTouches.length)return;
+ const dy=event.changedTouches[0].clientY-refreshTouchStart.y;
+ const dx=Math.abs(event.changedTouches[0].clientX-refreshTouchStart.x);
+ refreshTouchStart=null;
+ if(dy>95&&dx<75){$("refreshMap").click();}
+},{passive:true});
 $("refreshMap").onclick=()=>{
  const formInProgress=Boolean(selectedUploadFile);
  if(formInProgress&&!window.confirm("רענון הדף יבטל את עריכת התמונה הנוכחית. להמשיך?"))return;
@@ -218,7 +232,9 @@ async function exifDate(file){
  }catch{}
  return null;
 }
+let fileSelectionSerial=0;
 async function chooseFile(input,kind){
+ const selection=++fileSelectionSerial;
  const file=input.files[0],status=$("uploadStatus");
  if(!file)return;
  selectedUploadFile=null;sourceKind=kind;captureTime=null;
@@ -228,7 +244,9 @@ async function chooseFile(input,kind){
  if(!window.PhotoMapEditor){status.textContent="עורך טשטוש לא נטען. רענן את הדף.";return;}
  selectedUploadFile=file;
  $("fileSelection").textContent=kind==="camera"?"תמונה חדשה מהמצלמה":"תמונה שנבחרה מהטלפון";
- captureTime=await exifDate(file);
+ const parsedCapture=await exifDate(file);
+ if(selection!==fileSelectionSerial)return;
+ captureTime=parsedCapture;
  try{await window.PhotoMapEditor.load(file);}
  catch(error){status.textContent="עיבוד התמונה נכשל: "+error.message;}
 }
@@ -354,7 +372,7 @@ $("uploadForm").onsubmit=async e=>{
   try{data=JSON.parse(raw);}catch{throw Error("השרת החזיר תשובה לא צפויה (HTTP "+response.status+")");}
   if(!response.ok||!data.success)throw Error("HTTP "+response.status+": "+(data.error||"Upload failed"));
   status.textContent="התמונה התקבלה ונשמרה לבדיקה. היא תופיע במפה רק לאחר אישור.";
-  $("uploadForm").reset();window.PhotoMapEditor.reset();selectedLocation=null;selectedLocationConfirmed=false;selectedUploadFile=null;captureTime=null;sourceKind="unknown";locationSummary();$("fileSelection").textContent="בחר תמונה קיימת או צלם חדשה";
+  $("uploadForm").reset();window.PhotoMapEditor.reset();selectedLocation=null;selectedLocationConfirmed=false;selectedUploadFile=null;captureTime=null;sourceKind="unknown";fileSelectionSerial++;locationSummary();$("fileSelection").textContent="בחר תמונה קיימת או צלם חדשה";
   if(selectedLocationMarker){map.removeLayer(selectedLocationMarker);selectedLocationMarker=null;}
   displayPublishPosition();
  }catch(error){status.textContent="העלאה נכשלה: "+error.message;}
