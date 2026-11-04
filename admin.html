@@ -4,7 +4,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#112c36">
 <title>ניהול תמונות | PhotoMap</title>
-<link rel="stylesheet" href="admin.css?v=45">
+<link rel="stylesheet" href="admin.css?v=49">
 </head>
 <body>
 <a href="#main" class="skip">דלג לתוכן</a>
@@ -31,17 +31,18 @@
 </section>
 <section id="adminView" hidden>
 <div class="dashboardTop"><div><h1>ניהול PhotoMap</h1><p class="muted">אישור תמונות, דחייה וטיפול בדיווחים</p></div><div class="toolbar"><button id="reload" type="button">רענון</button><button id="logout" class="ghost" type="button">התנתקות</button></div></div>
-<nav class="tabs" aria-label="מסכי ניהול"><button id="photosTab" type="button" class="active" aria-pressed="true">תמונות</button><button id="reportsTab" type="button" aria-pressed="false">דיווחים</button></nav>
+<nav class="tabs" aria-label="מסכי ניהול"><button id="photosTab" type="button" class="active" aria-pressed="true">תמונות</button><button id="reportsTab" type="button" aria-pressed="false">דיווחים</button><button id="commentsTab" type="button" aria-pressed="false">תגובות לאישור</button></nav>
 <div id="photosSection">
 <div id="photoStats" class="stats" role="status" aria-live="polite"></div>
 <div class="filterLine"><label for="photoFilter">הצג</label><select id="photoFilter"><option value="pending">ממתינות לאישור</option><option value="approved">מאושרות</option><option value="rejected">נדחו</option><option value="all">הכול</option></select></div>
 <div class="warning">לפני אישור בדוק שאין בתמונה אנשים ללא הסכמה, קטינים, מידע אישי, מיקום רגיש או הפרת זכויות. כל תמונה עוברת ניקוי EXIF מחדש בעת האישור.</div>
 <div id="photoList" class="cards" aria-live="polite"></div></div>
 <div id="reportsSection" hidden><h2>דיווחים ובקשות מחיקה</h2><p class="muted">בחן כל דיווח ואל תסמן כ״טופל״ לפני ביצוע בדיקה או מחיקה נדרשת.</p><div id="reportList" class="cards" aria-live="polite"></div></div>
+<div id="commentsSection" hidden><h2>תגובות ממתינות לאישור</h2><p class="muted">כל תגובה חדשה ממתינה לאישור ידני, גם לאחר סינון ביטויים פוגעניים.</p><div id="adminCommentsList" class="cards" aria-live="polite"></div></div>
 <p id="adminStatus" role="status" aria-live="polite"></p>
 </section>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="config.js?v=40"></script>
-<script src="admin.js?v=45"></script>
+<script src="admin.js?v=49"></script>
 </body></html>
