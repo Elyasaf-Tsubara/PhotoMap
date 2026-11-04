@@ -7,7 +7,7 @@
  let detectorPromise=null;
  const msg=(value,bad=false)=>{const el=$("editorStatus");el.textContent=value;el.classList.toggle("error",bad);};
  const changed=()=>{const el=$("editorCount");el.textContent=state.faces+" פנים טושטשו אוטומטית · "+state.ops.length+" פעולות ידניות/אוטומטיות";};
- const enable=()=>{$("publish").disabled=!state.ready||!state.detected||state.loading;$("blurUndo").disabled=!state.ops.length;$("blurRedo").disabled=!state.redo.length;$("blurReset").disabled=!state.ops.length;};
+ const enable=()=>{$("publish").disabled=!state.ready||!state.detected||state.loading;$("blurUndo").disabled=!state.ops.some(op=>op.kind!=="face");$("blurRedo").disabled=!state.redo.length;$("blurReset").disabled=!state.ops.length;};
  const fit=(value,min,max)=>Math.min(max,Math.max(min,value));
  function pixelate(x,y,w,h,round=false){
   x=fit(Math.round(x),0,canvas.width);y=fit(Math.round(y),0,canvas.height);
@@ -40,6 +40,7 @@
    if(op.kind==="rect"||op.kind==="face")pixelate(op.x,op.y,op.w,op.h,op.kind==="face");
    else if(op.kind==="stroke")paintStroke(op.points,op.radius);
   }
+  if(state.active?.kind==="stroke")paintStroke(state.active.points,state.active.radius);
   if(state.active?.kind==="rect"){
    const r=rectFromPoints(state.active.start,state.active.end);
    ctx.save();ctx.strokeStyle="#00f5da";ctx.lineWidth=Math.max(2,canvas.width/500);
@@ -72,7 +73,7 @@
  }
  canvas.addEventListener("pointerup",finish);
  canvas.addEventListener("pointercancel",()=>{state.active=null;draw();});
- $("blurUndo").onclick=()=>{if(state.ops.length)state.redo.push(state.ops.pop());draw();};
+ $("blurUndo").onclick=()=>{const i=state.ops.findLastIndex(op=>op.kind!=="face");if(i>=0)state.redo.push(...state.ops.splice(i,1));draw();};
  $("blurRedo").onclick=()=>{if(state.redo.length)state.ops.push(state.redo.pop());draw();};
  $("blurReset").onclick=()=>{
   if(!confirm("לבטל את כל אזורי הטשטוש, כולל הפנים שזוהו? זיהוי הפנים ירוץ שוב לפני שתוכל להעלות."))return;
