@@ -51,7 +51,7 @@ async function detectDefaultLocation(){
  locationRequesting=true;
  $("locationSummary").textContent="מאתר את המיקום הנוכחי…";
  try{const p=await getLocation();if(!selectedLocation){setSelectedPosition(p,"המיקום הנוכחי");showCurrentPosition(p);}}
- catch(error){$("locationSummary").textContent="לא הצלחנו לזהות מיקום: "+explainLocationError(error);$("locationOptions").open=true;}
+ catch(error){if(!selectedLocation){$("locationSummary").textContent="לא הצלחנו לזהות מיקום: "+explainLocationError(error);$("locationOptions").open=true;}}
  finally{locationRequesting=false;}
 }
 $("confirmSelectedLocation").onclick=()=>{
@@ -293,7 +293,7 @@ function openPicture(p){
  $("photoInfoPanel").hidden=true;
  $("photoInfoButton").setAttribute("aria-expanded","false");
  $("reportPhoto").href="report.html?photo="+encodeURIComponent(p.id);
- $("commentForm").reset();$("commentStatus").textContent="";
+ $("commentForm").reset();$("commentStatus").textContent="";commentCaptchaToken="";if(window.turnstile&&commentCaptchaId!==null)window.turnstile.reset(commentCaptchaId);
  $("photoDialog").showModal();
  loadComments(p.id);
  if(commentCaptchaTimer)clearInterval(commentCaptchaTimer);
@@ -326,7 +326,7 @@ $("commentForm").onsubmit=async event=>{
  finally{button.disabled=false;commentCaptchaToken="";if(window.turnstile&&commentCaptchaId!==null)window.turnstile.reset(commentCaptchaId);}
 };
 $("closePhoto").onclick=()=>$("photoDialog").close();
-$("photoDialog").addEventListener("close",()=>{activePhotoId=null;});
+$("photoDialog").addEventListener("close",()=>{activePhotoId=null;commentCaptchaToken="";});
 function drawPictures(){markers.clearLayers();$("gallery").replaceChildren();if(!pictures.length){const msg=document.createElement("p");msg.textContent="עדיין אין תמונות מאושרות להצגה.";msg.setAttribute("role","status");$("gallery").append(msg);}for(const p of pictures){const url=publicImageUrl(p),img=document.createElement("img");img.src=url;img.alt=p.title;img.className="photoMarker";const marker=L.marker([p.latitude,p.longitude],{keyboard:true,title:"תמונה: "+p.title,alt:"תמונה: "+p.title,icon:L.divIcon({html:img.outerHTML,className:"",iconSize:[44,44],iconAnchor:[22,22]})}).addTo(markers);marker.on("click",()=>openPicture(p));const tile=document.createElement("button");tile.type="button";tile.className="tile";tile.setAttribute("aria-label","פתח תמונה: "+p.title);const pic=document.createElement("img");pic.src=url;pic.loading="lazy";pic.alt="";const title=document.createElement("span");title.textContent=p.title;tile.append(pic,title);tile.onclick=()=>{openPanel(null);map.setView([p.latitude,p.longitude],16);openPicture(p);};$("gallery").append(tile);}$("photoCount").textContent=pictures.length+" תמונות במפה";}
 async function loadPictures(){
  if(!ready){$("photoCount").textContent="מפה לדוגמה";return;}
