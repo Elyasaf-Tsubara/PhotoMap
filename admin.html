@@ -4,7 +4,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#112c36">
 <title>ניהול תמונות | PhotoMap</title>
-<link rel="stylesheet" href="admin.css?v=42">
+<link rel="stylesheet" href="admin.css?v=43">
 </head>
 <body>
 <a href="#main" class="skip">דלג לתוכן</a>
@@ -16,11 +16,15 @@
 <form id="loginForm">
 <label for="adminEmail">כתובת דוא״ל מאושרת</label>
 <input id="adminEmail" type="email" autocomplete="email" value="photomap.support@gmail.com" readonly>
-<button id="loginButton" type="submit">שלח קישור התחברות למייל</button>
+<label for="adminPassword">סיסמת מנהל ב־Supabase (לא סיסמת Gmail)</label>
+<input id="adminPassword" type="password" autocomplete="current-password" required minlength="8">
+<button id="loginButton" type="submit">התחברות לניהול</button>
 </form>
-<p class="helper">פתח את הקישור שיגיע למייל. אם קיבלת קוד חד־פעמי, אפשר להזין אותו כאן:</p>
+<details class="magicLogin"><summary>אפשרות נוספת: שליחת קישור למייל</summary><form id="magicForm"><p class="helper">פעולה זו זמינה רק אם משלוח מיילים והפניה חזרה לאתר הוגדרו ב־Supabase.</p><button id="magicButton" type="submit">שלח קישור התחברות</button></form>
+<p class="helper">אם קיבלת קוד חד־פעמי במייל, הזן אותו כאן:</p>
 <form id="otpForm"><label for="otpCode">קוד חד־פעמי (אם נשלח)</label>
 <div class="otpLine"><input id="otpCode" inputmode="numeric" pattern="[0-9]{6,8}" autocomplete="one-time-code" placeholder="123456"><button type="submit">אמת קוד</button></div></form>
+</details>
 <p id="loginStatus" role="status" aria-live="polite"></p>
 </section>
 <section id="adminView" hidden>
@@ -37,5 +41,5 @@
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="config.js?v=40"></script>
-<script src="admin.js?v=42"></script>
+<script src="admin.js?v=43"></script>
 </body></html>
