@@ -3,9 +3,11 @@
  const $=id=>document.getElementById(id);
  const originals=document.createElement("canvas"), source=originals.getContext("2d",{willReadFrequently:false});
  const canvas=$("editCanvas"),ctx=canvas.getContext("2d",{willReadFrequently:false});
- const state={ready:false,detected:false,fallback:false,loading:false,ops:[],redo:[],mode:"brush",active:null,faces:0,serial:0};
+ const state={ready:false,detected:false,fallback:false,loading:false,ops:[],redo:[],mode:"brush",editing:false,active:null,faces:0,serial:0};
  let detectorPromise=null;
  const msg=(value,bad=false)=>{const el=$("editorStatus");el.textContent=value;el.classList.toggle("error",bad);};
+ const hint=text=>{$("faceHintText").textContent=text;$("faceHint").hidden=false;};
+ $("faceHintClose").onclick=()=>{$("faceHint").hidden=true;};
  const changed=()=>{const el=$("editorCount");el.textContent=state.faces+" פנים טושטשו אוטומטית · "+state.ops.length+" פעולות ידניות/אוטומטיות";};
  const hasManualMasks=()=>state.ops.some(op=>op.kind==="rect"||op.kind==="stroke");
  const manuallyReviewed=()=>state.fallback&&hasManualMasks()&&$("manualReviewConsent").checked;
@@ -55,7 +57,7 @@
  const point=e=>{const b=canvas.getBoundingClientRect();return {x:fit((e.clientX-b.left)/b.width*canvas.width,0,canvas.width),y:fit((e.clientY-b.top)/b.height*canvas.height,0,canvas.height)};};
  function commit(op){state.ops.push(op);state.redo=[];draw();}
  canvas.addEventListener("pointerdown",e=>{
-  if(!state.ready||state.loading)return;
+  if(!state.ready||state.loading||!state.editing)return;
   e.preventDefault();canvas.setPointerCapture(e.pointerId);
   const p=point(e);
   if(state.mode==="brush")state.active={kind:"stroke",points:[p],radius:Number($("brushSize").value)*canvas.width/1000};
@@ -86,6 +88,14 @@
   for(const [id,value] of [["blurBrush","brush"],["blurRectangle","rect"]]){
    $(id).classList.toggle("selected",value===mode);$(id).setAttribute("aria-pressed",String(value===mode));
   }
+ };
+ $("toggleBrushTools").onclick=()=>{
+  state.editing=!state.editing;
+  $("blurToolOptions").hidden=!state.editing;
+  $("toggleBrushTools").setAttribute("aria-expanded",String(state.editing));
+  $("toggleBrushTools").classList.toggle("selected",state.editing);
+  canvas.classList.toggle("editing",state.editing);
+  if(state.editing){setMode("brush");$("faceHint").hidden=true;}
  };
  $("blurBrush").onclick=()=>setMode("brush");$("blurRectangle").onclick=()=>setMode("rect");
  $("blurDetect").onclick=()=>detectFaces();
@@ -121,6 +131,7 @@
     if(right>x&&bottom>y){state.ops.unshift({kind:"face",x,y,w:right-x,h:bottom-y});state.faces++;}
    }
    state.detected=true;state.fallback=false;state.redo=[];draw();
+   hint(state.faces?"זוהו וטושטשו "+state.faces+" פנים. בדוק את התוצאה; להשלמת טשטוש לחץ על כפתור המברשת.":"לא זוהו פנים אוטומטית. בדוק את התמונה; אפשר לטשטש פרטים נוספים דרך כפתור המברשת.");
    msg(state.faces
     ?"טושטשו אוטומטית "+state.faces+" פנים. בדוק שלא פספסנו פנים, לוחיות רישוי או פרטים מזהים."
     :"לא זוהו פנים בתמונה. בדוק בעצמך והוסף טשטוש ידני היכן שצריך.");
@@ -129,6 +140,7 @@
    state.detected=false;
    state.fallback=true;
    $("manualReviewFallback").hidden=false;
+   hint("זיהוי הפנים לא הצליח. פתח את המברשת, טשטש כל פרט מזהה ואז אשר בדיקה ידנית.");
    msg("לא הצלחנו להפעיל זיהוי פנים אוטומטי. אפשר לנסות שוב, או לטשטש ידנית את כל הפנים והפרטים המזהים ולאשר את הבדיקה הידנית. עדיין נדרש אישור מנהל לפרסום.",true);
    console.warn("PhotoMap face model unavailable",error?.name||"error");
   }finally{if(version===state.serial){state.loading=false;draw();}}
@@ -136,7 +148,8 @@
  async function load(file){
   const version=++state.serial;state.ready=false;state.detected=false;state.fallback=false;state.loading=true;
   $("manualReviewFallback").hidden=true;$("manualReviewConsent").checked=false;
-  state.faces=0;state.ops=[];state.redo=[];$("editorPanel").hidden=false;enable();
+  state.faces=0;state.ops=[];state.redo=[];state.editing=false;$("editorPanel").hidden=false;
+  $("blurToolOptions").hidden=true;$("toggleBrushTools").setAttribute("aria-expanded","false");$("toggleBrushTools").classList.remove("selected");canvas.classList.remove("editing");$("faceHint").hidden=true;enable();
   msg("פותח תמונה ומכין עורך טשטוש...");
   let bitmap=null,url=null;
   try{
@@ -164,7 +177,8 @@
  function reset(){
   state.serial++;state.ready=false;state.detected=false;state.fallback=false;state.loading=false;
   $("manualReviewFallback").hidden=true;$("manualReviewConsent").checked=false;
-  state.ops=[];state.redo=[];state.active=null;state.faces=0;
+  state.ops=[];state.redo=[];state.active=null;state.faces=0;state.editing=false;
+  $("blurToolOptions").hidden=true;$("faceHint").hidden=true;$("toggleBrushTools").setAttribute("aria-expanded","false");$("toggleBrushTools").classList.remove("selected");canvas.classList.remove("editing");
   $("editorPanel").hidden=true;msg("");changed();enable();
  }
  async function exportBlob(){
