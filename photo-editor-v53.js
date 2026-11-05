@@ -103,12 +103,33 @@
  $("brushSize").oninput=()=>{$("brushValue").textContent=$("brushSize").value;};
  async function getDetector(){
   if(!detectorPromise)detectorPromise=(async()=>{
-   const {FilesetResolver,FaceDetector}=await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/vision_bundle.mjs");
-   const files=await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/wasm");
-   return FaceDetector.createFromOptions(files,{
-    baseOptions:{modelAssetPath:"https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite",delegate:"CPU"},
-    runningMode:"IMAGE",minDetectionConfidence:.36
-   });
+   const providers=[
+    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22",
+    "https://unpkg.com/@mediapipe/tasks-vision@0.10.22"
+   ];
+   let lastError=null;
+   for(const provider of providers){
+    let stage="module";
+    try{
+     msg("טוען את ספריית זיהוי הפנים…");
+     const lib=await import(provider+"/vision_bundle.mjs");
+     const {FilesetResolver,FaceDetector}=lib;
+     if(!FilesetResolver||!FaceDetector)throw new Error("Missing task exports");
+     stage="wasm";
+     msg("טוען את מנוע העיבוד…");
+     const files=await FilesetResolver.forVisionTasks(provider+"/wasm");
+     stage="model";
+     msg("טוען את מודל זיהוי הפנים…");
+     return await FaceDetector.createFromOptions(files,{
+      baseOptions:{modelAssetPath:"https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite",delegate:"CPU"},
+      runningMode:"IMAGE",minDetectionConfidence:.36
+     });
+    }catch(error){
+     lastError=new Error(stage+": "+String(error?.message||error?.name||"unknown").slice(0,130));
+     console.warn("PhotoMap face provider failed",provider,stage,lastError.message);
+    }
+   }
+   throw lastError||new Error("Detector could not start");
   })().catch(error=>{detectorPromise=null;throw error;});
   return detectorPromise;
  }
@@ -119,7 +140,8 @@
   try{
    const detector=await getDetector();
    if(version!==state.serial)return;
-   const result=detector.detect(originals);
+   let result;
+   try{result=detector.detect(originals);}catch(error){throw new Error("inference: "+String(error?.message||error?.name||"unknown").slice(0,130));}
    if(version!==state.serial)return;
    // Re-run detection replaces previous automatically generated masks, never manual edits.
    state.ops=state.ops.filter(op=>op.kind!=="face");
@@ -141,7 +163,7 @@
    state.fallback=true;
    $("manualReviewFallback").hidden=false;
    hint("זיהוי הפנים לא הצליח. פתח את המברשת, טשטש כל פרט מזהה ואז אשר בדיקה ידנית.");
-   msg("לא הצלחנו להפעיל זיהוי פנים אוטומטי. אפשר לנסות שוב, או לטשטש ידנית את כל הפנים והפרטים המזהים ולאשר את הבדיקה הידנית. עדיין נדרש אישור מנהל לפרסום.",true);
+   msg("זיהוי פנים נכשל ("+String(error?.message||error?.name||"unknown").slice(0,130)+"). אפשר לנסות שוב, או לטשטש ידנית ולאשר בדיקה ידנית לפני שליחה למנהל.",true);
    console.warn("PhotoMap detector failed",error?.name||"error",error?.message||"");
   }finally{if(version===state.serial){state.loading=false;draw();}}
  }
