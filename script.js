@@ -9,6 +9,7 @@ function showUploadStage(step){
   const active=Number(el.dataset.step)===step;el.classList.toggle("active",active);
   if(active)el.setAttribute("aria-current","step");else el.removeAttribute("aria-current");
  });
+ if(step===3){let tries=0;const poll=setInterval(()=>{mountCaptcha();if(captchaWidgetId!==null||++tries>=60)clearInterval(poll);},200);}
  const panel=$("uploadPanel");if(!panel.hidden)panel.scrollTop=0;
 }
 $("privacyTipOk").onclick=()=>$("privacyTipDialog").close();
@@ -26,7 +27,7 @@ $("editNext").onclick=()=>{
 showUploadStage(1);
 function openPanel(id){
  const prior=$("uploadPanel").hidden?($("galleryPanel").hidden?null:"galleryPanel"):"uploadPanel";
- if(id==="uploadPanel"){let tries=0;const poll=setInterval(()=>{mountCaptcha();tries++;if(captchaWidgetId!==null||tries>=60)clearInterval(poll);},200);if(!selectedLocation&&!locationRequesting){detectDefaultLocation();}if(!privacyReminderSeen){privacyReminderSeen=true;setTimeout(()=>{if(!$("uploadPanel").hidden&&!$("privacyTipDialog").open)$("privacyTipDialog").showModal();},100);}}
+ if(id==="uploadPanel"){if(!selectedLocation&&!locationRequesting){detectDefaultLocation();}if(!privacyReminderSeen){privacyReminderSeen=true;setTimeout(()=>{if(!$("uploadPanel").hidden&&!$("privacyTipDialog").open)$("privacyTipDialog").showModal();},100);}}
  $("galleryPanel").hidden=id!=="galleryPanel";
  $("uploadPanel").hidden=id!=="uploadPanel";
  $("mainContent").inert=Boolean(id);
