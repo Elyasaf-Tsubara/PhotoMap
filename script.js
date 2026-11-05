@@ -1,9 +1,32 @@
 "use strict";const $=id=>document.getElementById(id);const config=window.PHOTO_MAP_CONFIG||{};const ready=Boolean(config.supabaseUrl&&config.supabaseAnonKey&&window.supabase);const db=ready?window.supabase.createClient(config.supabaseUrl,config.supabaseAnonKey):null;const map=L.map("map",{zoomControl:false}).setView([31.78,35.22],8);L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'}).addTo(map);L.control.zoom({position:"bottomright",zoomInTitle:"התקרב",zoomOutTitle:"התרחק"}).addTo(map);let pictures=[],markers=L.layerGroup().addTo(map),selectedLocation=null,selectedLocationConfirmed=false,selectedUploadFile=null,sourceKind="unknown",captureTime=null,activePhotoId=null;const maxBytes=8*1024*1024;
 function notice(message){$("mapNotice").textContent=message;$("mapNotice").hidden=false;}
 if(!ready)notice("מצב הדגמה: המפה פעילה, אבל פרסום ושיתוף תמונות יפעלו רק לאחר חיבור מאגר Supabase.");
-let captchaWidgetId=null;let captchaToken="";function mountCaptcha(){if(captchaWidgetId!==null||!window.turnstile||!config.turnstileSiteKey)return;captchaWidgetId=window.turnstile.render("#turnstileWidget",{sitekey:config.turnstileSiteKey,callback:token=>{captchaToken=token;}, "expired-callback":()=>{captchaToken="";},"error-callback":()=>{captchaToken="";}});}function openPanel(id){
+let captchaWidgetId=null;let captchaToken="";function mountCaptcha(){if(captchaWidgetId!==null||!window.turnstile||!config.turnstileSiteKey)return;captchaWidgetId=window.turnstile.render("#turnstileWidget",{sitekey:config.turnstileSiteKey,callback:token=>{captchaToken=token;}, "expired-callback":()=>{captchaToken="";},"error-callback":()=>{captchaToken="";}});}let uploadStage=1,privacyReminderSeen=false;
+function showUploadStage(step){
+ uploadStage=step;
+ for(const [id,n] of [["uploadStepPick",1],["uploadStepEdit",2],["uploadStepDetails",3]])$(id).hidden=n!==step;
+ document.querySelectorAll(".uploadSteps [data-step]").forEach(el=>{
+  const active=Number(el.dataset.step)===step;el.classList.toggle("active",active);
+  if(active)el.setAttribute("aria-current","step");else el.removeAttribute("aria-current");
+ });
+ const panel=$("uploadPanel");if(!panel.hidden)panel.scrollTop=0;
+}
+$("privacyTipOk").onclick=()=>$("privacyTipDialog").close();
+$("editBack").onclick=()=>showUploadStage(1);
+$("detailsBack").onclick=()=>showUploadStage(2);
+$("editNext").onclick=()=>{
+ if(!window.PhotoMapEditor?.isReady()){
+  $("editStepMessage").textContent="יש להשלים טשטוש וזיהוי פנים או לאשר בדיקה ידנית לפני מעבר לשלב הבא.";
+  return;
+ }
+ $("editStepMessage").textContent="";
+ showUploadStage(3);
+ $("detailsStepHeading").focus?.({preventScroll:true});
+};
+showUploadStage(1);
+function openPanel(id){
  const prior=$("uploadPanel").hidden?($("galleryPanel").hidden?null:"galleryPanel"):"uploadPanel";
- if(id==="uploadPanel"){let tries=0;const poll=setInterval(()=>{mountCaptcha();tries++;if(captchaWidgetId!==null||tries>=60)clearInterval(poll);},200);if(!selectedLocation&&!locationRequesting){detectDefaultLocation();}}
+ if(id==="uploadPanel"){let tries=0;const poll=setInterval(()=>{mountCaptcha();tries++;if(captchaWidgetId!==null||tries>=60)clearInterval(poll);},200);if(!selectedLocation&&!locationRequesting){detectDefaultLocation();}if(!privacyReminderSeen){privacyReminderSeen=true;setTimeout(()=>{if(!$("uploadPanel").hidden&&!$("privacyTipDialog").open)$("privacyTipDialog").showModal();},100);}}
  $("galleryPanel").hidden=id!=="galleryPanel";
  $("uploadPanel").hidden=id!=="uploadPanel";
  $("mainContent").inert=Boolean(id);
@@ -244,6 +267,7 @@ async function chooseFile(input,kind){
  if(!window.PhotoMapEditor){status.textContent="עורך טשטוש לא נטען. רענן את הדף.";return;}
  selectedUploadFile=file;
  $("fileSelection").textContent=kind==="camera"?"תמונה חדשה מהמצלמה":"תמונה שנבחרה מהטלפון";
+ showUploadStage(2);$("editStepMessage").textContent="";
  const parsedCapture=await exifDate(file);
  if(selection!==fileSelectionSerial)return;
  captureTime=parsedCapture;
@@ -372,7 +396,7 @@ $("uploadForm").onsubmit=async e=>{
   try{data=JSON.parse(raw);}catch{throw Error("השרת החזיר תשובה לא צפויה (HTTP "+response.status+")");}
   if(!response.ok||!data.success)throw Error("HTTP "+response.status+": "+(data.error||"Upload failed"));
   status.textContent="התמונה התקבלה ונשמרה לבדיקה. היא תופיע במפה רק לאחר אישור.";
-  $("uploadForm").reset();window.PhotoMapEditor.reset();selectedLocation=null;selectedLocationConfirmed=false;selectedUploadFile=null;captureTime=null;sourceKind="unknown";fileSelectionSerial++;locationSummary();$("fileSelection").textContent="בחר תמונה קיימת או צלם חדשה";
+  $("uploadForm").reset();window.PhotoMapEditor.reset();showUploadStage(1);selectedLocation=null;selectedLocationConfirmed=false;selectedUploadFile=null;captureTime=null;sourceKind="unknown";fileSelectionSerial++;locationSummary();$("fileSelection").textContent="בחר תמונה קיימת או צלם חדשה";
   if(selectedLocationMarker){map.removeLayer(selectedLocationMarker);selectedLocationMarker=null;}
   displayPublishPosition();
  }catch(error){status.textContent="העלאה נכשלה: "+error.message;}
